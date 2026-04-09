@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Totobola entre Amigos</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --ink: #14140f;
+    --muted: #6b6960;
+    --line: #e6e3da;
+    --accent: #1e5b3a;
+    --accent-soft: #e8f0ea;
+    --gold: #c89b3c;
+    --danger: #b3361f;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(20,20,15,.04), 0 8px 24px rgba(20,20,15,.05);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  header.top {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+  }
+  .brand {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 28px; letter-spacing: -0.02em;
+  }
+  .brand .dot { color: var(--accent); }
+  .brand small {
+    display: block; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-top: 2px;
+  }
+  nav.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+  nav.tabs button {
+    border: 0; background: transparent; padding: 8px 16px; border-radius: 999px;
+    font: inherit; font-weight: 500; color: var(--muted); cursor: pointer;
+  }
+  nav.tabs button.active { background: var(--ink); color: #fff; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 22px 24px; margin-bottom: 20px;
+  }
+  .card h2 {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em;
+  }
+  .card .sub {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 18px;
+  }
+  .row-head, .row {
+    display: grid; align-items: center; gap: 12px; padding: 12px 8px; border-bottom: 1px solid var(--line);
+  }
+  .row-head {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); border-bottom: 1px solid var(--ink);
+  }
+  .row:last-child { border-bottom: 0; }
+
+  .standings .row-head, .standings .row { grid-template-columns: 40px 1fr 80px 80px 80px; }
+  .standings .pts { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; text-align: right; }
+  .rank { font-family: 'Fraunces', serif; font-size: 18px; color: var(--muted); }
+  .rank.top { color: var(--gold); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  .games .row-head, .games .row { grid-template-columns: 1fr 90px 1fr; }
+  .games .row { padding: 14px 8px; }
+  .games .home { text-align: right; font-weight: 500; }
+  .games .away { text-align: left; font-weight: 500; }
+  .games .score {
+    text-align: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px;
+    background: var(--accent-soft); color: var(--accent); padding: 4px 10px; border-radius: 8px;
+  }
+  .games .score.empty { background: transparent; color: var(--muted); font-weight: 400; font-style: italic; font-family: 'Inter', sans-serif; font-size: 13px; }
+
+  .bets-grid { overflow-x: auto; }
+  .bets-grid table { width: 100%; border-collapse: collapse; min-width: 500px; }
+  .bets-grid th, .bets-grid td { padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .bets-grid th { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--ink); }
+  .bets-grid td.match { text-align: left; font-size: 12px; color: var(--muted); }
+  .bets-grid td.bet { font-family: 'Fraunces', serif; font-weight: 500; }
+  .bets-grid td.bet.exact { background: #fff5d9; color: #7a5a00; border-radius: 6px; }
+  .bets-grid td.bet.outcome { background: var(--accent-soft); color: var(--accent); border-radius: 6px; }
+  .bets-grid td.bet.miss { color: var(--muted); }
+  .bets-grid tfoot td { font-family: 'Fraunces', serif; font-weight: 700; font-size: 16px; padding-top: 14px; border-bottom: 0; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-style: italic; }
+  .empty .big { font-family: 'Fraunces', serif; font-size: 18px; font-style: normal; color: var(--ink); margin-bottom: 6px; }
+
+  label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  input, select, textarea {
+    width: 100%; font: inherit; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; background: #fafaf7;
+    color: var(--ink); transition: border .15s;
+  }
+  input:focus, select:focus, textarea:focus { outline: 0; border-color: var(--accent); background: #fff; }
+  input[type=number] { -moz-appearance: textfield; }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  button.btn {
+    background: var(--ink); color: #fff; border: 0; padding: 10px 18px;
+    border-radius: 8px; font: inherit; font-weight: 500; cursor: pointer; transition: opacity .15s;
+  }
+  button.btn:hover { opacity: .85; }
+  button.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button.btn.danger { background: var(--danger); }
+  button.btn.accent { background: var(--accent); }
+
+  .field-row { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .field-row .vs { text-align: center; color: var(--muted); font-size: 11px; }
+  .score-row { display: grid; grid-template-columns: 1fr 50px 14px 50px 1fr 30px; gap: 6px; align-items: center; margin-bottom: 6px; font-size: 13px; }
+  .score-row .lbl { color: var(--muted); }
+  .score-row .lbl.l { text-align: right; }
+  .score-row .x { text-align: center; color: var(--muted); }
+  .score-row input { text-align: center; padding: 6px 4px; }
+
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 500; background: var(--accent-soft); color: var(--accent); margin-left: 8px; }
+  .pill.muted { background: var(--line); color: var(--muted); }
+
+  details.player-block { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; background: #fafaf7; }
+  details.player-block summary { cursor: pointer; font-weight: 500; outline: 0; }
+  details.player-block[open] { background: #fff; }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .small { font-size: 12px; color: var(--muted); }
+  .danger-zone { border-top: 1px dashed var(--line); margin-top: 24px; padding-top: 16px; }
+
+  .login-box { max-width: 380px; margin: 40px auto; }
+  .login-box .card { text-align: center; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
+  .ok { color: var(--accent); font-size: 13px; margin-top: 8px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 999px;
+    font-size: 13px; box-shadow: var(--shadow); opacity: 0; transition: opacity .2s;
+    pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  .loading { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .config-error {
+    max-width: 600px; margin: 60px auto; background: #fff; border: 2px solid var(--danger);
+    border-radius: var(--radius); padding: 24px;
+  }
+  .config-error h2 { color: var(--danger); margin-top: 0; }
+  .config-error code { background: #f6f5f1; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+  @media (max-width: 640px) {
+    .standings .row-head, .standings .row { grid-template-columns: 30px 1fr 60px 60px 70px; font-size: 13px; }
+    .games .row-head, .games .row { grid-template-columns: 1fr 70px 1fr; }
+    .wrap { padding: 20px 14px 60px; }
+    .brand { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      Toto<span class="dot">·</span>bola
+      <small>Dashboard entre amigos</small>
+    </div>
+    <nav class="tabs">
+      <button id="tab-main" class="active">Principal</button>
+      <button id="tab-history">Histórico</button>
+      <button id="tab-admin">Admin</button>
+    </nav>
+  </header>
+  <main id="content"><div class="loading">A carregar…</div></main>
+</div>
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============ CONFIG ============
+// 👇 Substituir estes dois valores pelos do teu projeto Supabase (ver README.md)
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+// ============ INIT SUPABASE ============
+let sb = null;
+let configOk = SUPABASE_URL && SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+if (configOk) {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+// ============ STORAGE LAYER ============
+const STATE_KEY = 'app_state';
+const PWD_KEY = 'admin_pwd_hash';
+
+async function kvGet(key) {
+  const { data, error } = await sb.from('kv_store').select('value').eq('key', key).maybeSingle();
+  if (error) throw error;
+  return data ? data.value : null;
+}
+async function kvSet(key, value) {
+  const { error } = await sb.from('kv_store').upsert({ key, value, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ============ STATE ============
+let state = { currentRoundId: null, rounds: {}, players: [] };
+let isAdmin = false;
+let currentTab = 'main';
+
+async function loadState() {
+  try {
+    const v = await kvGet(STATE_KEY);
+    if (v) state = v;
+  } catch (e) {
+    console.error('loadState error', e);
+    showToast('Erro ao carregar dados: ' + e.message);
+  }
+}
+async function saveState() {
+  try {
+    await kvSet(STATE_KEY, state);
+  } catch (e) {
+    console.error('saveState error', e);
+    showToast('Erro ao guardar: ' + e.message);
+  }
+}
+
+// ============ SCORING ============
+function pointsForBet(bet, result) {
+  if (!result || result.homeScore == null || result.awayScore == null) return null;
+  if (!bet || bet.h == null || bet.a == null) return 0;
+  if (bet.h === result.homeScore && bet.a === result.awayScore) return 3;
+  const sign = (a, b) => a > b ? 1 : (a < b ? -1 : 0);
+  if (sign(bet.h, bet.a) === sign(result.homeScore, result.awayScore)) return 1;
+  return 0;
+}
+function roundTotals(round) {
+  const totals = {};
+  for (const p of state.players) totals[p] = 0;
+  if (!round) return totals;
+  for (const p of Object.keys(round.bets || {})) {
+    const bets = round.bets[p];
+    let sum = 0;
+    round.games.forEach((g, i) => {
+      const pts = pointsForBet(bets[i], g);
+      if (pts != null) sum += pts;
+    });
+    totals[p] = sum;
+  }
+  return totals;
+}
+function generalStandings() {
+  const totals = {};
+  for (const p of state.players) totals[p] = { pts: 0, exact: 0, played: 0 };
+  for (const rid of Object.keys(state.rounds)) {
+    const round = state.rounds[rid];
+    const finished = round.games.length > 0 && round.games.every(g => g.homeScore != null && g.awayScore != null);
+    if (!finished) continue;
+    for (const p of Object.keys(round.bets || {})) {
+      if (!totals[p]) totals[p] = { pts: 0, exact: 0, played: 0 };
+      totals[p].played++;
+      round.games.forEach((g, i) => {
+        const pts = pointsForBet(round.bets[p][i], g);
+        if (pts === 3) totals[p].exact++;
+        totals[p].pts += pts || 0;
+      });
+    }
+  }
+  return Object.entries(totals)
+    .map(([name, t]) => ({ name, ...t }))
+    .sort((a, b) => b.pts - a.pts || b.exact - a.exact);
+}
+function allBetsSubmitted(round) {
+  if (!round || state.players.length === 0 || round.games.length === 0) return false;
+  return state.players.every(p => {
+    const b = (round.bets || {})[p];
+    return b && b.length === round.games.length && b.every(x => x && x.h != null && x.a != null);
+  });
+}
+
+// ============ RENDER MAIN ============
+function renderMain() {
+  const round = state.rounds[state.currentRoundId];
+  const standings = generalStandings();
+  let html = '';
+
+  html += `<section class="card standings">
+    <h2>Classificação Geral</h2>
+    <div class="sub">Pontuação acumulada · todas as jornadas concluídas</div>`;
+  if (standings.length === 0 || standings.every(s => s.played === 0)) {
+    html += `<div class="empty"><div class="big">Ainda sem jornadas concluídas</div>A classificação aparece quando os primeiros resultados forem inseridos.</div>`;
+  } else {
+    html += `<div class="row-head"><div></div><div>Jogador</div><div class="num">Jornadas</div><div class="num">Exatos</div><div class="num">Pontos</div></div>`;
+    standings.forEach((s, i) => {
+      html += `<div class="row">
+        <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
+        <div>${escapeHtml(s.name)}</div>
+        <div class="num">${s.played}</div>
+        <div class="num">${s.exact}</div>
+        <div class="pts">${s.pts}</div>
+      </div>`;
+    });
+  }
+  html += `</section>`;
+
+  html += `<section class="card games">
+    <h2>Jornada Atual ${round ? `<span class="pill">${escapeHtml(round.name)}</span>` : ''}</h2>
+    <div class="sub">Jogos e resultados</div>`;
+  if (!round || round.games.length === 0) {
+    html += `<div class="empty"><div class="big">Sem jornada definida</div>O administrador ainda não criou a jornada atual.</div>`;
+  } else {
+    html += `<div class="row-head"><div style="text-align:right">Casa</div><div style="text-align:center">Resultado</div><div>Fora</div></div>`;
+    round.games.forEach(g => {
+      const has = g.homeScore != null && g.awayScore != null;
+      html += `<div class="row">
+        <div class="home">${escapeHtml(g.home)}</div>
+        <div class="score ${has ? '' : 'empty'}">${has ? `${g.homeScore} – ${g.awayScore}` : 'por jogar'}</div>
+        <div class="away">${escapeHtml(g.away)}</div>
+      </div>`;
+    });
+  }
+  html += `</section>`;
+
+  if (round && round.games.length > 0) {
+    const allIn = allBetsSubmitted(round);
+    html += `<section class="card">
+      <h2>Apostas dos Jogadores</h2>
+      <div class="sub">Jornada atual</div>`;
+    if (!allIn) {
+      const submitted = state.players.filter(p => {
+        const b = (round.bets || {})[p];
+        return b && b.length === round.games.length && b.every(x => x && x.h != null && x.a != null);
+      }).length;
+      html += `<div class="empty"><div class="big">🔒 Apostas ocultas</div>As apostas ficam visíveis quando todos submeterem.<br><span class="small">${submitted} de ${state.players.length} jogadores submeteram.</span></div>`;
+    } else {
+      const totals = roundTotals(round);
+      html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th>`;
+      state.players.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
+      html += `</tr></thead><tbody>`;
+      round.games.forEach((g, i) => {
+        html += `<tr><td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td>`;
+        state.players.forEach(p => {
+          const b = round.bets[p][i];
+          const pts = pointsForBet(b, g);
+          let cls = '';
+          if (pts === 3) cls = 'exact';
+          else if (pts === 1) cls = 'outcome';
+          else if (pts === 0) cls = 'miss';
+          html += `<td class="bet ${cls}">${b.h}–${b.a}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody><tfoot><tr><td class="match">Total</td>`;
+      state.players.forEach(p => html += `<td>${totals[p]}</td>`);
+      html += `</tr></tfoot></table></div>`;
+    }
+    html += `</section>`;
+  }
+
+  if (round && state.players.length > 0 && allBetsSubmitted(round)) {
+    const totals = roundTotals(round);
+    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    html += `<section class="card standings">
+      <h2>Resultados da Jornada Atual</h2>
+      <div class="sub">Pontuação obtida nesta jornada</div>
+      <div class="row-head"><div></div><div>Jogador</div><div></div><div></div><div class="num">Pontos</div></div>`;
+    sorted.forEach(([name, pts], i) => {
+      html += `<div class="row">
+        <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
+        <div>${escapeHtml(name)}</div>
+        <div></div><div></div>
+        <div class="pts">${pts}</div>
+      </div>`;
+    });
+    html += `</section>`;
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+// ============ RENDER HISTORY ============
+function renderHistory() {
+  const ids = Object.keys(state.rounds);
+  let html = `<section class="card">
+    <h2>Histórico de Jornadas</h2>
+    <div class="sub">Resultados e apostas anteriores</div>`;
+  if (ids.length === 0) {
+    html += `<div class="empty"><div class="big">Sem histórico ainda</div>Nenhuma jornada foi criada.</div>`;
+  } else {
+    ids.slice().reverse().forEach(rid => {
+      const round = state.rounds[rid];
+      const isCurrent = rid === state.currentRoundId;
+      const finished = round.games.length > 0 && round.games.every(g => g.homeScore != null && g.awayScore != null);
+      const totals = roundTotals(round);
+      html += `<details class="player-block" ${isCurrent ? 'open' : ''}>
+        <summary>${escapeHtml(round.name)} ${isCurrent ? '<span class="pill">atual</span>' : ''} ${finished ? '' : '<span class="pill muted">em curso</span>'}</summary>
+        <div style="margin-top:14px">`;
+      if (round.games.length === 0) {
+        html += `<div class="small">Sem jogos.</div>`;
+      } else {
+        html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th><th>Resultado</th>`;
+        const playersInRound = Object.keys(round.bets || {}).length > 0 ? Object.keys(round.bets) : state.players;
+        playersInRound.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
+        html += `</tr></thead><tbody>`;
+        round.games.forEach((g, i) => {
+          const has = g.homeScore != null && g.awayScore != null;
+          html += `<tr><td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td><td>${has ? `${g.homeScore}–${g.awayScore}` : '—'}</td>`;
+          playersInRound.forEach(p => {
+            const b = (round.bets[p] || [])[i];
+            if (!b || b.h == null) { html += `<td class="bet miss">—</td>`; return; }
+            const pts = pointsForBet(b, g);
+            let cls = '';
+            if (pts === 3) cls = 'exact'; else if (pts === 1) cls = 'outcome'; else if (pts === 0) cls = 'miss';
+            html += `<td class="bet ${cls}">${b.h}–${b.a}</td>`;
+          });
+          html += `</tr>`;
+        });
+        html += `</tbody><tfoot><tr><td class="match">Total</td><td></td>`;
+        playersInRound.forEach(p => html += `<td>${totals[p] || 0}</td>`);
+        html += `</tr></tfoot></table></div>`;
+      }
+      html += `</div></details>`;
+    });
+  }
+  html += `</section>`;
+  document.getElementById('content').innerHTML = html;
+}
+
+// ============ ADMIN ============
+async function renderAdmin() {
+  if (!isAdmin) {
+    let stored = null;
+    try { stored = await kvGet(PWD_KEY); } catch (e) { console.error(e); }
+
+    let html = `<div class="login-box"><div class="card">
+      <h2>Área de Administração</h2>
+      <div class="sub">Acesso restrito</div>`;
+    if (!stored) {
+      html += `<p class="small">Primeira utilização: define a password de administrador.</p>
+        <input type="password" id="newpwd" placeholder="Nova password (mín. 4 caracteres)" onkeydown="if(event.key==='Enter')doSetPassword()">
+        <div style="height:8px"></div>
+        <button class="btn accent" onclick="doSetPassword()">Definir password</button>
+        <div id="msg"></div>`;
+    } else {
+      html += `<input type="password" id="pwd" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+        <div style="height:8px"></div>
+        <button class="btn accent" onclick="doLogin()">Entrar</button>
+        <div id="msg"></div>`;
+    }
+    html += `</div></div>`;
+    document.getElementById('content').innerHTML = html;
+    return;
+  }
+
+  const round = state.rounds[state.currentRoundId];
+  let html = '';
+
+  html += `<section class="card">
+    <h2>Jogadores</h2>
+    <div class="sub">Quem participa no totobola</div>
+    <div id="players-list">`;
+  state.players.forEach(p => {
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">
+      <span>${escapeHtml(p)}</span>
+      <button class="btn ghost" onclick="removePlayer('${escapeAttr(p)}')">Remover</button>
+    </div>`;
+  });
+  html += `</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <input id="newplayer" placeholder="Nome do jogador" onkeydown="if(event.key==='Enter')addPlayer()">
+      <button class="btn" onclick="addPlayer()">Adicionar</button>
+    </div>
+  </section>`;
+
+  html += `<section class="card">
+    <h2>Jornadas</h2>
+    <div class="sub">Gerir jornadas existentes</div>
+    <label>Jornada atual (visível na página principal)</label>
+    <select id="current-select" onchange="setCurrent(this.value)">
+      <option value="">— nenhuma —</option>`;
+  Object.values(state.rounds).forEach(r => {
+    html += `<option value="${escapeAttr(r.id)}" ${r.id === state.currentRoundId ? 'selected' : ''}>${escapeHtml(r.name)}</option>`;
+  });
+  html += `</select>
+    <div style="height:14px"></div>
+    <label>Criar nova jornada</label>
+    <div style="display:flex;gap:8px">
+      <input id="new-round-name" placeholder="ex.: Jornada 12" onkeydown="if(event.key==='Enter')createRound()">
+      <button class="btn accent" onclick="createRound()">Criar</button>
+    </div>
+  </section>`;
+
+  if (round) {
+    html += `<section class="card">
+      <h2>Editar ${escapeHtml(round.name)}</h2>
+      <div class="sub">Jogos, resultados e apostas</div>
+      <label>Jogos da jornada</label>
+      <div id="games-list">`;
+    round.games.forEach((g, i) => {
+      html += `<div class="field-row">
+        <input value="${escapeAttr(g.home)}" onchange="updateGame(${i},'home',this.value)" placeholder="Casa">
+        <div class="vs">vs</div>
+        <input value="${escapeAttr(g.away)}" onchange="updateGame(${i},'away',this.value)" placeholder="Fora">
+      </div>`;
+    });
+    html += `</div>
+      <div class="toolbar">
+        <button class="btn ghost" onclick="addGame()">+ Adicionar jogo</button>
+        ${round.games.length > 0 ? `<button class="btn ghost" onclick="removeLastGame()">– Remover último</button>` : ''}
+      </div>`;
+
+    if (round.games.length > 0) {
+      html += `<div style="height:24px"></div><label>Resultados finais</label>`;
+      round.games.forEach((g, i) => {
+        html += `<div class="score-row">
+          <div class="lbl l">${escapeHtml(g.home)}</div>
+          <input type="number" min="0" value="${g.homeScore ?? ''}" onchange="updateScore(${i},'homeScore',this.value)">
+          <div class="x">–</div>
+          <input type="number" min="0" value="${g.awayScore ?? ''}" onchange="updateScore(${i},'awayScore',this.value)">
+          <div class="lbl">${escapeHtml(g.away)}</div>
+          <div></div>
+        </div>`;
+      });
+    }
+
+    if (state.players.length > 0 && round.games.length > 0) {
+      html += `<div style="height:24px"></div><label>Apostas dos jogadores</label>`;
+      state.players.forEach(p => {
+        const bets = (round.bets || {})[p] || [];
+        const filled = bets.filter(b => b && b.h != null && b.a != null).length;
+        html += `<details class="player-block">
+          <summary>${escapeHtml(p)} <span class="pill ${filled === round.games.length ? '' : 'muted'}">${filled}/${round.games.length}</span></summary>
+          <div style="margin-top:12px">`;
+        round.games.forEach((g, i) => {
+          const b = bets[i] || {};
+          html += `<div class="score-row">
+            <div class="lbl l">${escapeHtml(g.home)}</div>
+            <input type="number" min="0" value="${b.h ?? ''}" onchange="updateBet('${escapeAttr(p)}',${i},'h',this.value)">
+            <div class="x">–</div>
+            <input type="number" min="0" value="${b.a ?? ''}" onchange="updateBet('${escapeAttr(p)}',${i},'a',this.value)">
+            <div class="lbl">${escapeHtml(g.away)}</div>
+            <div></div>
+          </div>`;
+        });
+        html += `</div></details>`;
+      });
+    }
+
+    html += `<div class="danger-zone">
+      <button class="btn danger" onclick="deleteRound('${escapeAttr(round.id)}')">Apagar esta jornada</button>
+    </div>
+    </section>`;
+  }
+
+  html += `<section class="card">
+    <h2>Conta</h2>
+    <div class="sub">Gestão de acesso</div>
+    <div class="toolbar">
+      <button class="btn ghost" onclick="changePassword()">Mudar password</button>
+      <button class="btn ghost" onclick="logout()">Terminar sessão</button>
+    </div>
+  </section>`;
+
+  document.getElementById('content').innerHTML = html;
+}
+
+// ============ ADMIN ACTIONS ============
+async function doLogin() {
+  const v = document.getElementById('pwd').value;
+  try {
+    const stored = await kvGet(PWD_KEY);
+    const hash = await sha256(v);
+    if (hash === stored) { isAdmin = true; renderAdmin(); }
+    else { document.getElementById('msg').innerHTML = '<div class="err">Password incorreta.</div>'; }
+  } catch (e) {
+    document.getElementById('msg').innerHTML = '<div class="err">Erro: ' + e.message + '</div>';
+  }
+}
+async function doSetPassword() {
+  const v = document.getElementById('newpwd').value.trim();
+  if (v.length < 4) { document.getElementById('msg').innerHTML = '<div class="err">Mínimo 4 caracteres.</div>'; return; }
+  try {
+    const hash = await sha256(v);
+    await kvSet(PWD_KEY, hash);
+    isAdmin = true;
+    showToast('Password definida.');
+    renderAdmin();
+  } catch (e) {
+    document.getElementById('msg').innerHTML = '<div class="err">Erro: ' + e.message + '</div>';
+  }
+}
+async function changePassword() {
+  const v = prompt('Nova password (mínimo 4 caracteres):');
+  if (v && v.trim().length >= 4) {
+    const hash = await sha256(v.trim());
+    await kvSet(PWD_KEY, hash);
+    showToast('Password atualizada.');
+  }
+}
+function logout() { isAdmin = false; renderAdmin(); }
+
+async function addPlayer() {
+  const v = document.getElementById('newplayer').value.trim();
+  if (!v || state.players.includes(v)) return;
+  state.players.push(v);
+  await saveState();
+  renderAdmin();
+}
+async function removePlayer(name) {
+  if (!confirm('Remover jogador "' + name + '"? As suas apostas serão também removidas.')) return;
+  state.players = state.players.filter(p => p !== name);
+  for (const rid of Object.keys(state.rounds)) {
+    if (state.rounds[rid].bets) delete state.rounds[rid].bets[name];
+  }
+  await saveState();
+  renderAdmin();
+}
+async function createRound() {
+  const name = document.getElementById('new-round-name').value.trim();
+  if (!name) return;
+  const id = 'r' + Date.now();
+  state.rounds[id] = { id, name, games: [], bets: {} };
+  if (!state.currentRoundId) state.currentRoundId = id;
+  await saveState();
+  renderAdmin();
+}
+async function setCurrent(id) {
+  state.currentRoundId = id || null;
+  await saveState();
+  renderAdmin();
+}
+async function deleteRound(id) {
+  if (!confirm('Apagar jornada definitivamente?')) return;
+  delete state.rounds[id];
+  if (state.currentRoundId === id) state.currentRoundId = null;
+  await saveState();
+  renderAdmin();
+}
+async function addGame() {
+  const r = state.rounds[state.currentRoundId];
+  r.games.push({ home: '', away: '', homeScore: null, awayScore: null });
+  for (const p of Object.keys(r.bets || {})) r.bets[p].push({ h: null, a: null });
+  await saveState();
+  renderAdmin();
+}
+async function removeLastGame() {
+  const r = state.rounds[state.currentRoundId];
+  r.games.pop();
+  for (const p of Object.keys(r.bets || {})) r.bets[p].pop();
+  await saveState();
+  renderAdmin();
+}
+async function updateGame(i, field, val) {
+  state.rounds[state.currentRoundId].games[i][field] = val;
+  await saveState();
+}
+async function updateScore(i, field, val) {
+  const v = val === '' ? null : parseInt(val, 10);
+  state.rounds[state.currentRoundId].games[i][field] = isNaN(v) ? null : v;
+  await saveState();
+}
+async function updateBet(player, i, field, val) {
+  const r = state.rounds[state.currentRoundId];
+  if (!r.bets) r.bets = {};
+  if (!r.bets[player]) r.bets[player] = r.games.map(() => ({ h: null, a: null }));
+  while (r.bets[player].length < r.games.length) r.bets[player].push({ h: null, a: null });
+  const v = val === '' ? null : parseInt(val, 10);
+  r.bets[player][i][field] = isNaN(v) ? null : v;
+  await saveState();
+}
+
+// ============ HELPERS ============
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ============ TABS ============
+function switchTab(t) {
+  currentTab = t;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + t).classList.add('active');
+  rerender();
+}
+function rerender() {
+  if (currentTab === 'main') renderMain();
+  else if (currentTab === 'history') renderHistory();
+  else renderAdmin();
+}
+document.getElementById('tab-main').onclick = () => switchTab('main');
+document.getElementById('tab-history').onclick = () => switchTab('history');
+document.getElementById('tab-admin').onclick = () => switchTab('admin');
+
+// ============ INIT ============
+(async function init() {
+  if (!configOk) {
+    document.getElementById('content').innerHTML = `<div class="config-error">
+      <h2>⚙️ Configuração necessária</h2>
+      <p>Edita o ficheiro <code>index.html</code> e substitui as constantes <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> pelos valores do teu projeto Supabase.</p>
+      <p class="small">Vê o <code>README.md</code> para o passo a passo.</p>
+    </div>`;
+    return;
+  }
+
+  await loadState();
+  renderMain();
+
+  // Realtime: refresh when data changes from another user
+  sb.channel('kv-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'kv_store', filter: `key=eq.${STATE_KEY}` }, async () => {
+      await loadState();
+      if (currentTab !== 'admin' || !isAdmin) rerender();
+    })
+    .subscribe();
+})();
+</script>
+</body>
+</html>
