@@ -87,9 +87,9 @@
   .bets-grid th { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--ink); }
   .bets-grid td.match { text-align: left; font-size: 12px; color: var(--muted); }
   .bets-grid td.bet { font-family: 'Fraunces', serif; font-weight: 500; }
-  .bets-grid td.bet.exact { background: #fff5d9; color: #7a5a00; border-radius: 6px; }
-  .bets-grid td.bet.outcome { background: var(--accent-soft); color: var(--accent); border-radius: 6px; }
-  .bets-grid td.bet.miss { color: var(--muted); }
+  .bets-grid td.bet.exact { background: var(--accent-soft); color: var(--accent); border-radius: 6px; }
+  .bets-grid td.bet.outcome { background: #fff5d9; color: #7a5a00; border-radius: 6px; }
+  .bets-grid td.bet.miss { background: #fbe4df; color: var(--danger); border-radius: 6px; }
   .bets-grid tfoot td { font-family: 'Fraunces', serif; font-weight: 700; font-size: 16px; padding-top: 14px; border-bottom: 0; }
 
   .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-style: italic; }
@@ -297,7 +297,7 @@ function renderMain() {
 
   html += `<section class="card standings">
     <h2>Classificação Geral</h2>
-    <div class="sub">Pontuação acumulada · todas as jornadas concluídas</div>`;
+    <div style="margin-bottom:18px"></div>`;
   if (standings.length === 0 || standings.every(s => s.played === 0)) {
     html += `<div class="empty"><div class="big">Ainda sem jornadas concluídas</div>A classificação aparece quando os primeiros resultados forem inseridos.</div>`;
   } else {
@@ -408,6 +408,19 @@ function renderHistory() {
         <div style="margin-top:14px">`;
       if (round.games.length === 0) {
         html += `<div class="small">Sem jogos.</div>`;
+      } else if (!allBetsSubmitted(round)) {
+        // Show only games + results, hide bets until everyone submitted
+        const submitted = state.players.filter(p => {
+          const b = (round.bets || {})[p];
+          return b && b.length === round.games.length && b.every(x => x && x.h != null && x.a != null);
+        }).length;
+        html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th><th>Resultado</th></tr></thead><tbody>`;
+        round.games.forEach(g => {
+          const has = g.homeScore != null && g.awayScore != null;
+          html += `<tr><td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td><td>${has ? `${g.homeScore}–${g.awayScore}` : '—'}</td></tr>`;
+        });
+        html += `</tbody></table></div>
+          <div class="empty" style="padding:20px 10px"><div class="big">🔒 Apostas ocultas</div>Ficam visíveis quando todos submeterem.<br><span class="small">${submitted} de ${state.players.length} jogadores submeteram.</span></div>`;
       } else {
         html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th><th>Resultado</th>`;
         const playersInRound = Object.keys(round.bets || {}).length > 0 ? Object.keys(round.bets) : state.players;
