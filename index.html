@@ -305,7 +305,7 @@ function renderMain() {
     standings.forEach((s, i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
-        <div>${escapeHtml(s.name)}</div>
+        <div style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px" onclick="showPlayer('${escapeAttr(s.name)}')">${escapeHtml(s.name)}</div>
         <div class="num">${s.played}</div>
         <div class="num">${s.exact}</div>
         <div class="pts">${s.pts}</div>
@@ -386,6 +386,76 @@ function renderMain() {
     html += `</section>`;
   }
 
+  document.getElementById('content').innerHTML = html;
+}
+
+// ============ RENDER PLAYER DETAIL ============
+let selectedPlayer = null;
+function showPlayer(name) {
+  selectedPlayer = name;
+  currentTab = 'player';
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+  renderPlayer();
+}
+function renderPlayer() {
+  const name = selectedPlayer;
+  let totalPts = 0, totalExact = 0, totalOutcome = 0, totalMiss = 0;
+  let html = `<section class="card">
+    <button class="btn ghost" onclick="switchTab('main')" style="margin-bottom:16px">← Voltar</button>
+    <h2>${escapeHtml(name)}</h2>
+    <div class="sub">Histórico de apostas</div>`;
+
+  const ids = Object.keys(state.rounds).slice().reverse();
+  const roundsWithBets = ids.filter(rid => {
+    const r = state.rounds[rid];
+    const b = (r.bets || {})[name];
+    return b && b.length === r.games.length && b.every(x => x && x.h != null && x.a != null);
+  });
+
+  if (roundsWithBets.length === 0) {
+    html += `<div class="empty"><div class="big">Sem apostas registadas</div>Ainda não há jornadas com apostas deste jogador.</div></section>`;
+    document.getElementById('content').innerHTML = html;
+    return;
+  }
+
+  let blocks = '';
+  roundsWithBets.forEach(rid => {
+    const round = state.rounds[rid];
+    const bets = round.bets[name];
+    let roundPts = 0;
+    let rows = '';
+    round.games.forEach((g, i) => {
+      const b = bets[i];
+      const pts = pointsForBet(b, g);
+      let cls = 'miss', label = '—';
+      if (pts === 3) { cls = 'exact'; totalExact++; }
+      else if (pts === 1) { cls = 'outcome'; totalOutcome++; }
+      else if (pts === 0) { cls = 'miss'; totalMiss++; }
+      else { cls = ''; label = 'pendente'; }
+      if (pts != null) { roundPts += pts; totalPts += pts; }
+      const has = g.homeScore != null && g.awayScore != null;
+      rows += `<tr>
+        <td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td>
+        <td>${has ? `${g.homeScore}–${g.awayScore}` : '—'}</td>
+        <td class="bet ${cls}">${b.h}–${b.a}</td>
+        <td>${pts != null ? pts : '—'}</td>
+      </tr>`;
+    });
+    blocks += `<details class="player-block" open>
+      <summary>${escapeHtml(round.name)} <span class="pill">${roundPts} pts</span></summary>
+      <div style="margin-top:12px"><div class="bets-grid"><table>
+        <thead><tr><th class="match">Jogo</th><th>Resultado</th><th>Aposta</th><th>Pts</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div></div>
+    </details>`;
+  });
+
+  html += `<div style="display:flex;gap:20px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--line);margin-bottom:18px">
+    <div><div class="small">Total</div><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:600">${totalPts} pts</div></div>
+    <div><div class="small">Exatos</div><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:600;color:var(--accent)">${totalExact}</div></div>
+    <div><div class="small">V/E/D</div><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:600;color:#7a5a00">${totalOutcome}</div></div>
+    <div><div class="small">Erros</div><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:600;color:var(--danger)">${totalMiss}</div></div>
+  </div>${blocks}</section>`;
   document.getElementById('content').innerHTML = html;
 }
 
@@ -713,6 +783,7 @@ function switchTab(t) {
 function rerender() {
   if (currentTab === 'main') renderMain();
   else if (currentTab === 'history') renderHistory();
+  else if (currentTab === 'player') renderPlayer();
   else renderAdmin();
 }
 document.getElementById('tab-main').onclick = () => switchTab('main');
