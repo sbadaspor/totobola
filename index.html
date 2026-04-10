@@ -71,8 +71,9 @@
   .rank.top { color: var(--gold); }
   .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
 
-  .games .row-head, .games .row { grid-template-columns: 1fr 90px 1fr; }
+  .games .row-head, .games .row { grid-template-columns: 70px 1fr 100px 1fr; }
   .games .row { padding: 14px 8px; }
+  .games .gdate { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-variant-numeric: tabular-nums; }
   .games .home { text-align: right; font-weight: 500; }
   .games .away { text-align: left; font-weight: 500; }
   .games .score {
@@ -156,7 +157,8 @@
 
   @media (max-width: 640px) {
     .standings .row-head, .standings .row { grid-template-columns: 30px 1fr 60px 60px 70px; font-size: 13px; }
-    .games .row-head, .games .row { grid-template-columns: 1fr 70px 1fr; }
+    .games .row-head, .games .row { grid-template-columns: 50px 1fr 80px 1fr; gap: 6px; }
+    .games .gdate { font-size: 10px; }
     .wrap { padding: 20px 14px 60px; }
     .brand { font-size: 22px; }
   }
@@ -320,12 +322,18 @@ function renderMain() {
   if (!round || round.games.length === 0) {
     html += `<div class="empty"><div class="big">Sem jornada definida</div>O administrador ainda não criou a jornada atual.</div>`;
   } else {
-    html += `<div class="row-head"><div style="text-align:right">Casa</div><div style="text-align:center">Resultado</div><div>Fora</div></div>`;
+    html += `<div class="row-head"><div>Dia</div><div style="text-align:right">Casa</div><div style="text-align:center">Resultado</div><div>Fora</div></div>`;
     round.games.forEach(g => {
       const has = g.homeScore != null && g.awayScore != null;
+      const dateStr = g.date ? formatDate(g.date) : '';
+      const timeStr = g.time || '';
+      const scoreContent = has
+        ? `${g.homeScore} – ${g.awayScore}`
+        : (timeStr ? timeStr : 'por jogar');
       html += `<div class="row">
+        <div class="gdate">${dateStr}</div>
         <div class="home">${escapeHtml(g.home)}</div>
-        <div class="score ${has ? '' : 'empty'}">${has ? `${g.homeScore} – ${g.awayScore}` : 'por jogar'}</div>
+        <div class="score ${has ? '' : 'empty'}">${scoreContent}</div>
         <div class="away">${escapeHtml(g.away)}</div>
       </div>`;
     });
@@ -595,6 +603,11 @@ async function renderAdmin() {
         <input value="${escapeAttr(g.home)}" onchange="updateGame(${i},'home',this.value)" placeholder="Casa">
         <div class="vs">vs</div>
         <input value="${escapeAttr(g.away)}" onchange="updateGame(${i},'away',this.value)" placeholder="Fora">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 30px;gap:8px;margin-bottom:14px">
+        <input type="date" value="${g.date||''}" onchange="updateGame(${i},'date',this.value)" title="Dia do jogo">
+        <input type="time" value="${g.time||''}" onchange="updateGame(${i},'time',this.value)" title="Hora do jogo">
+        <div></div>
       </div>`;
     });
     html += `</div>
@@ -732,7 +745,7 @@ async function deleteRound(id) {
 }
 async function addGame() {
   const r = state.rounds[state.currentRoundId];
-  r.games.push({ home: '', away: '', homeScore: null, awayScore: null });
+  r.games.push({ home: '', away: '', date: '', time: '', homeScore: null, awayScore: null });
   for (const p of Object.keys(r.bets || {})) r.bets[p].push({ h: null, a: null });
   await saveState();
   renderAdmin();
@@ -766,6 +779,13 @@ async function updateBet(player, i, field, val) {
 // ============ HELPERS ============
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
+function formatDate(iso) {
+  if (!iso) return '';
+  const parts = iso.split('-'); // YYYY-MM-DD
+  if (parts.length !== 3) return iso;
+  const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  return `${parseInt(parts[2],10)} ${months[parseInt(parts[1],10)-1]}`;
+}
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
