@@ -1470,19 +1470,27 @@ function matchScore(a, b) {
   return common / Math.max(wa.size, wb.size);
 }
 
-async function fdFetch(path) {
-  const res = await fetch(`https://api.football-data.org/v4/${path}`, {
-    headers: { 'X-Auth-Token': FD_TOKEN }
-  });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  return res.json();
+const FD_PROXY = 'https://fd-proxy.danielcostasilva-dcs.workers.dev';
+
+async function fdFetch(path, params = {}) {
+  const qs  = new URLSearchParams({ path, ...params }).toString();
+  const res = await fetch(`${FD_PROXY}?${qs}`);
+  if (!res.ok) {
+    const txt = await res.text().catch(() => res.statusText);
+    throw new Error(`Proxy error ${res.status}: ${txt}`);
+  }
+  const data = await res.json();
+  if (data.errorCode) throw new Error(`API: ${data.message || data.errorCode}`);
+  return data;
 }
 
 // Fetch matches for a given date range across all competitions available on free tier
 async function fdMatchesForDates(dateFrom, dateTo) {
-  // Free tier allows: PL, PD, BL1, SA, FL1, DED, PPL, CL, EL, ECNL, BSA, MLS, WC, EC
-  // PPL = Primeira Liga Portugal
-  const data = await fdFetch(`matches?dateFrom=${dateFrom}&dateTo=${dateTo}&status=FINISHED,IN_PLAY,PAUSED`);
+  const data = await fdFetch('matches', {
+    dateFrom,
+    dateTo,
+    status: 'FINISHED,IN_PLAY,PAUSED'
+  });
   return data.matches || [];
 }
 
