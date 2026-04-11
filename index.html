@@ -962,6 +962,22 @@ function updatePlayerBanner() {
 }
 
 // ============ RENDER MY BETS ============
+// Returns true if the first game of the round has already kicked off
+function roundIsLocked(round) {
+  if (!round || round.games.length === 0) return false;
+  // Find the earliest game with a date set
+  const gamesWithDate = round.games.filter(g => g.date);
+  if (gamesWithDate.length === 0) return false;
+  gamesWithDate.sort((a, b) => {
+    const da = new Date(`${a.date}T${a.time || '00:00'}`);
+    const db = new Date(`${b.date}T${b.time || '00:00'}`);
+    return da - db;
+  });
+  const first = gamesWithDate[0];
+  const kickoff = new Date(`${first.date}T${first.time || '00:00'}`);
+  return Date.now() >= kickoff.getTime();
+}
+
 async function renderMyBets() {
   const name = currentPlayerSession;
   if (!name) { switchTab('main'); return; }
@@ -984,13 +1000,18 @@ async function renderMyBets() {
 
   const existingBets = ((round.bets || {})[name]) || [];
   const alreadyFull = existingBets.length === round.games.length && existingBets.every(b => b && b.h != null && b.a != null);
+  const locked = roundIsLocked(round);
 
   html += `<h3 style="font-family:'Fraunces',serif;margin:0 0 4px">${escapeHtml(round.name)}</h3>
     <div class="sub">Insere o teu prognóstico para cada jogo</div>`;
 
-  if (alreadyFull) {
+  if (locked) {
+    html += `<div style="background:#fbe4df;border-radius:10px;padding:14px 16px;margin-bottom:18px;color:var(--danger);font-weight:500">
+      🔒 O primeiro jogo desta jornada já começou. As apostas estão fechadas.
+    </div>`;
+  } else if (alreadyFull) {
     html += `<div style="background:var(--accent-soft);border-radius:10px;padding:14px 16px;margin-bottom:18px;color:var(--accent);font-weight:500">
-      ✅ Já submeteste as tuas apostas para esta jornada. Podes alterá-las enquanto os resultados não estiverem todos inseridos.
+      ✅ Já submeteste as tuas apostas para esta jornada. Podes alterá-las até começar o primeiro jogo da jornada.
     </div>`;
   }
 
@@ -1003,19 +1024,21 @@ async function renderMyBets() {
       <div class="small" style="margin-bottom:8px">${dateStr}${timeStr}</div>
       <div class="score-row">
         <div class="lbl l">${escapeHtml(g.home)}</div>
-        <input type="number" min="0" id="mb-${i}-h" value="${b.h ?? ''}" placeholder="—" style="text-align:center;padding:8px 4px">
+        <input type="number" min="0" id="mb-${i}-h" value="${b.h ?? ''}" placeholder="—" style="text-align:center;padding:8px 4px" ${locked ? 'disabled' : ''}>
         <div class="x">–</div>
-        <input type="number" min="0" id="mb-${i}-a" value="${b.a ?? ''}" placeholder="—" style="text-align:center;padding:8px 4px">
+        <input type="number" min="0" id="mb-${i}-a" value="${b.a ?? ''}" placeholder="—" style="text-align:center;padding:8px 4px" ${locked ? 'disabled' : ''}>
         <div class="lbl">${escapeHtml(g.away)}</div>
         <div></div>
       </div>
     </div>`;
   });
-  html += `</div>
-    <div class="toolbar">
+  html += `</div>`;
+  if (!locked) {
+    html += `<div class="toolbar">
       <button class="btn accent" onclick="submitMyBets()">💾 Guardar apostas</button>
-    </div>
-  </section>`;
+    </div>`;
+  }
+  html += `</section>`;
 
   document.getElementById('content').innerHTML = html;
 }
@@ -1024,6 +1047,13 @@ async function submitMyBets() {
   const name = currentPlayerSession;
   const round = state.rounds[state.currentRoundId];
   if (!name || !round) return;
+
+  // Double-check server-side lock
+  if (roundIsLocked(round)) {
+    showToast('🔒 Apostas fechadas — o primeiro jogo já começou.');
+    renderMyBets();
+    return;
+  }
 
   if (!round.bets) round.bets = {};
   if (!round.bets[name]) round.bets[name] = round.games.map(() => ({ h: null, a: null }));
