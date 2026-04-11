@@ -185,12 +185,76 @@
   .config-error h2 { color: var(--danger); margin-top: 0; }
   .config-error code { background: #f6f5f1; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
 
+  /* ── Countdown ── */
+  .countdown-bar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    background: #fff8e6; border: 1px solid #f0d88a; border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 20px;
+  }
+  .countdown-bar.urgent { background: #fbe4df; border-color: #e8b4aa; }
+  .countdown-bar.locked { background: #f0f0ee; border-color: var(--line); }
+  .countdown-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .countdown-time { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; color: #7a5a00; letter-spacing: .02em; }
+  .countdown-bar.urgent .countdown-time { color: var(--danger); }
+  .countdown-bar.locked .countdown-time { color: var(--muted); font-size: 15px; font-family: 'Inter', sans-serif; font-weight: 500; }
+
+  /* ── Mobile bets cards ── */
+  .mobile-bets { display: none; }
+  .bet-card {
+    border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px;
+    overflow: hidden; background: var(--surface);
+  }
+  .bet-card-game {
+    padding: 10px 14px; font-size: 12px; color: var(--muted);
+    border-bottom: 1px solid var(--line); background: #fafaf7;
+  }
+  .bet-card-players { display: flex; flex-direction: column; }
+  .bet-card-row {
+    display: grid; grid-template-columns: 32px 1fr 1fr; align-items: center;
+    padding: 8px 14px; border-bottom: 1px solid var(--line); gap: 8px;
+  }
+  .bet-card-row:last-child { border-bottom: 0; }
+  .bet-card-score { font-family: 'Fraunces', serif; font-weight: 600; font-size: 15px; text-align: center; }
+  .bet-card-score.exact { color: var(--accent); }
+  .bet-card-score.outcome { color: #7a5a00; }
+  .bet-card-score.miss { color: var(--danger); }
+  .bet-card-pts { text-align: right; font-size: 12px; color: var(--muted); }
+
+  /* ── Share button ── */
+  .share-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 12px;
+    cursor: pointer; transition: all .15s;
+  }
+  .share-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ── Share canvas overlay ── */
+  #share-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    z-index: 200; align-items: center; justify-content: center; padding: 20px;
+  }
+  #share-overlay.show { display: flex; }
+  #share-box {
+    background: #fff; border-radius: 16px; padding: 24px; max-width: 420px; width: 100%;
+    box-shadow: 0 8px 40px rgba(0,0,0,.2); text-align: center;
+  }
+  #share-box h3 { margin: 0 0 14px; font-family: 'Fraunces', serif; }
+  #share-img { width: 100%; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--line); }
+  #share-box .btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
   @media (max-width: 640px) {
     .standings .row-head, .standings .row { grid-template-columns: 30px 28px 1fr 60px 60px 70px; font-size: 13px; }
     .games .row-head, .games .row { grid-template-columns: 50px 1fr 80px 1fr; gap: 6px; }
     .games .gdate { font-size: 10px; }
     .wrap { padding: 20px 14px 60px; }
     .brand { font-size: 22px; }
+    /* On mobile, hide the horizontal bets table and show card layout */
+    .bets-grid-desktop { display: none !important; }
+    .mobile-bets { display: block; }
+    /* Compact standings on mobile */
+    .standings .row-head .num, .standings .row .num { display: none; }
+    .standings .row-head, .standings .row { grid-template-columns: 30px 28px 1fr 80px; }
   }
 </style>
 </head>
@@ -211,6 +275,16 @@
   </header>
   <main id="content"><div class="loading">A carregar…</div></main>
 </div>
+<div id="share-overlay" onclick="if(event.target===this)closeShare()">
+  <div id="share-box">
+    <h3>📤 Partilhar Classificação</h3>
+    <img id="share-img" alt="classificação">
+    <div class="btns">
+      <button class="btn accent" onclick="downloadShare()">⬇ Guardar imagem</button>
+      <button class="btn ghost" onclick="closeShare()">Fechar</button>
+    </div>
+  </div>
+</div>
 <div id="player-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--accent);color:#fff;padding:10px 20px;display:none;align-items:center;justify-content:space-between;font-size:13px;z-index:50;gap:12px">
   <span id="player-banner-name"></span>
   <button class="btn" style="background:rgba(255,255,255,0.2);font-size:12px;padding:6px 14px" onclick="logoutPlayer()">Terminar sessão</button>
@@ -218,6 +292,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 // ============ CONFIG ============
 // 👇 Substituir estes dois valores pelos do teu projeto Supabase (ver README.md)
@@ -248,6 +323,106 @@ async function kvSet(key, value) {
 async function sha256(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ============ COUNTDOWN ============
+let countdownTimer = null;
+
+function firstKickoff(round) {
+  if (!round) return null;
+  const gamesWithDate = round.games.filter(g => g.date);
+  if (gamesWithDate.length === 0) return null;
+  gamesWithDate.sort((a, b) => new Date(`${a.date}T${a.time||'00:00'}`) - new Date(`${b.date}T${b.time||'00:00'}`));
+  return new Date(`${gamesWithDate[0].date}T${gamesWithDate[0].time||'00:00'}`);
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return null;
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0) return `${d}d ${h.toString().padStart(2,'0')}h ${m.toString().padStart(2,'0')}m`;
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+}
+
+function renderCountdownBar(round, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const kickoff = firstKickoff(round);
+  if (!kickoff) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  const update = () => {
+    const ms = kickoff - Date.now();
+    if (ms <= 0) {
+      el.className = 'countdown-bar locked';
+      el.querySelector('.countdown-time').textContent = '🔒 Apostas fechadas';
+      el.querySelector('.countdown-label').textContent = 'O primeiro jogo já começou';
+      clearInterval(countdownTimer);
+    } else {
+      const urgent = ms < 3600000; // < 1 hora
+      el.className = 'countdown-bar' + (urgent ? ' urgent' : '');
+      el.querySelector('.countdown-time').textContent = formatCountdown(ms);
+      el.querySelector('.countdown-label').textContent = 'Fecho das apostas em';
+    }
+  };
+  clearInterval(countdownTimer);
+  update();
+  countdownTimer = setInterval(update, 1000);
+}
+
+// ============ SHARE ============
+let shareDataUrl = null;
+
+async function openShare() {
+  // Build an off-screen standings card to screenshot
+  const standings = generalStandings();
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;left:-9999px;top:0;width:440px;background:#f6f5f1;padding:24px;font-family:Inter,sans-serif;font-size:14px;border-radius:16px;';
+  div.innerHTML = `
+    <div style="font-family:Fraunces,serif;font-weight:600;font-size:22px;margin-bottom:4px;letter-spacing:-0.02em">
+      Toto<span style="color:#1e5b3a">·</span>bola
+    </div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#6b6960;margin-bottom:18px">Classificação Geral</div>
+    ${standings.filter(s => s.played > 0).map((s, i) => {
+      const photo = (state.playerPhotos || {})[s.name];
+      const initials = s.name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('');
+      const avatarStyle = `width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:Fraunces,serif;font-weight:600;font-size:13px;flex-shrink:0;overflow:hidden;border:2px solid #e6e3da;`;
+      const avatarEl = photo
+        ? `<img src="${photo}" style="${avatarStyle}object-fit:cover;">`
+        : `<span style="${avatarStyle}background:#e8f0ea;color:#1e5b3a;">${initials}</span>`;
+      return `<div style="display:grid;grid-template-columns:32px 32px 1fr 60px;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid #e6e3da;">
+        <div style="font-family:Fraunces,serif;font-size:17px;color:${i===0?'#c89b3c':'#6b6960'}">${i+1}</div>
+        ${avatarEl}
+        <div style="font-weight:500">${s.name}</div>
+        <div style="font-family:Fraunces,serif;font-size:18px;font-weight:600;text-align:right">${s.pts}</div>
+      </div>`;
+    }).join('')}
+    <div style="margin-top:14px;font-size:11px;color:#6b6960;text-align:right">gerado em ${new Date().toLocaleDateString('pt-PT')}</div>
+  `;
+  document.body.appendChild(div);
+  try {
+    const canvas = await html2canvas(div, { scale: 2, backgroundColor: '#f6f5f1', logging: false });
+    shareDataUrl = canvas.toDataURL('image/png');
+    document.getElementById('share-img').src = shareDataUrl;
+    document.getElementById('share-overlay').classList.add('show');
+  } catch(e) {
+    showToast('Erro ao gerar imagem.');
+  }
+  document.body.removeChild(div);
+}
+
+function closeShare() {
+  document.getElementById('share-overlay').classList.remove('show');
+}
+
+function downloadShare() {
+  if (!shareDataUrl) return;
+  const a = document.createElement('a');
+  a.href = shareDataUrl;
+  a.download = 'classificacao-totobola.png';
+  a.click();
 }
 
 // ============ AVATAR HELPERS ============
@@ -393,9 +568,24 @@ function renderMain() {
   const standings = generalStandings();
   let html = '';
 
-  html += `<section class="card standings">
-    <h2>Classificação Geral</h2>
-    <div style="margin-bottom:18px"></div>`;
+  // Countdown bar (only when there's an active round with dates)
+  const kickoff = firstKickoff(round);
+  if (kickoff) {
+    html += `<div id="countdown-main" class="countdown-bar">
+      <div>
+        <div class="countdown-label">Fecho das apostas em</div>
+        <div class="countdown-time">…</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">${round ? escapeHtml(round.name) : ''}</div>
+    </div>`;
+  }
+
+  html += `<section class="card standings" id="standings-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+      <h2 style="margin:0">Classificação Geral</h2>
+      <button class="share-btn" onclick="openShare()">📤 Partilhar</button>
+    </div>
+    <div style="margin-bottom:14px"></div>`;
   if (standings.length === 0 || standings.every(s => s.played === 0)) {
     html += `<div class="empty"><div class="big">Ainda sem jornadas concluídas</div>A classificação aparece quando os primeiros resultados forem inseridos.</div>`;
   } else {
@@ -450,7 +640,8 @@ function renderMain() {
       html += `<div class="empty"><div class="big">🔒 Apostas ocultas</div>As apostas ficam visíveis quando todos submeterem.<br><span class="small">${submitted} de ${state.players.length} jogadores submeteram.</span></div>`;
     } else {
       const totals = roundTotals(round);
-      html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th>`;
+      // Desktop table
+      html += `<div class="bets-grid bets-grid-desktop"><table><thead><tr><th class="match">Jogo</th>`;
       state.players.forEach(p => html += `<th><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${avatarHtml(p,'sm')}<span>${escapeHtml(p)}</span></div></th>`);
       html += `</tr></thead><tbody>`;
       round.games.forEach((g, i) => {
@@ -469,6 +660,39 @@ function renderMain() {
       html += `</tbody><tfoot><tr><td class="match">Total</td>`;
       state.players.forEach(p => html += `<td>${totals[p]}</td>`);
       html += `</tr></tfoot></table></div>`;
+      // Mobile cards
+      html += `<div class="mobile-bets">`;
+      round.games.forEach((g, i) => {
+        const has = g.homeScore != null && g.awayScore != null;
+        html += `<div class="bet-card">
+          <div class="bet-card-game">${escapeHtml(g.home)} – ${escapeHtml(g.away)}${has ? `  <strong>${g.homeScore}–${g.awayScore}</strong>` : ''}</div>
+          <div class="bet-card-players">`;
+        state.players.forEach(p => {
+          const b = round.bets[p][i];
+          const pts = pointsForBet(b, g);
+          let cls = '';
+          if (pts === 3) cls = 'exact'; else if (pts === 1) cls = 'outcome'; else if (pts === 0) cls = 'miss';
+          html += `<div class="bet-card-row">
+            ${avatarHtml(p, 'sm')}
+            <div style="font-weight:500;font-size:13px">${escapeHtml(p)}</div>
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
+              <span class="bet-card-score ${cls}">${b.h}–${b.a}</span>
+              <span class="bet-card-pts">${pts != null ? pts + 'pt' : ''}</span>
+            </div>
+          </div>`;
+        });
+        html += `</div></div>`;
+      });
+      // Mobile totals
+      html += `<div class="bet-card"><div class="bet-card-game" style="font-weight:600;color:var(--ink)">Total da jornada</div><div class="bet-card-players">`;
+      state.players.forEach(p => {
+        html += `<div class="bet-card-row">
+          ${avatarHtml(p, 'sm')}
+          <div style="font-weight:500;font-size:13px">${escapeHtml(p)}</div>
+          <div style="text-align:right;font-family:'Fraunces',serif;font-size:18px;font-weight:600">${totals[p]}</div>
+        </div>`;
+      });
+      html += `</div></div></div>`;
     }
     html += `</section>`;
   }
@@ -479,7 +703,7 @@ function renderMain() {
     html += `<section class="card standings">
       <h2>Resultados da Jornada Atual</h2>
       <div class="sub">Pontuação obtida nesta jornada</div>
-      <div class="row-head"><div></div><div></div><div>Jogador</div><div></div><div></div><div class="num">Pontos</div></div>`;
+      <div class="row-head"><div></div><div></div><div>Jogador</div><div class="num"></div><div class="num"></div><div class="num">Pontos</div></div>`;
     sorted.forEach(([name, pts], i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
@@ -493,6 +717,7 @@ function renderMain() {
   }
 
   document.getElementById('content').innerHTML = html;
+  if (kickoff) renderCountdownBar(round, 'countdown-main');
 }
 
 // ============ RENDER PLAYER DETAIL ============
@@ -1002,6 +1227,17 @@ async function renderMyBets() {
   const alreadyFull = existingBets.length === round.games.length && existingBets.every(b => b && b.h != null && b.a != null);
   const locked = roundIsLocked(round);
 
+  // Countdown
+  const kickoff = firstKickoff(round);
+  if (kickoff) {
+    html += `<div id="countdown-mybets" class="countdown-bar">
+      <div>
+        <div class="countdown-label">Fecho das apostas em</div>
+        <div class="countdown-time">…</div>
+      </div>
+    </div>`;
+  }
+
   html += `<h3 style="font-family:'Fraunces',serif;margin:0 0 4px">${escapeHtml(round.name)}</h3>
     <div class="sub">Insere o teu prognóstico para cada jogo</div>`;
 
@@ -1040,7 +1276,57 @@ async function renderMyBets() {
   }
   html += `</section>`;
 
+  // ── Historial próprio ──
+  const ids = Object.keys(state.rounds).slice().reverse();
+  const pastRounds = ids.filter(rid => {
+    if (rid === state.currentRoundId) return false;
+    const r = state.rounds[rid];
+    const b = (r.bets || {})[name];
+    return b && b.length === r.games.length && b.every(x => x && x.h != null && x.a != null);
+  });
+
+  if (pastRounds.length > 0) {
+    let totalPts = 0, totalExact = 0;
+    html += `<section class="card">
+      <h2>O meu historial</h2>
+      <div class="sub">Jornadas anteriores</div>`;
+    pastRounds.forEach(rid => {
+      const r = state.rounds[rid];
+      const bets = r.bets[name];
+      let roundPts = 0;
+      let rows = '';
+      bets.forEach((b, i) => {
+        const g = r.games[i];
+        if (!g) return;
+        const pts = pointsForBet(b, g);
+        if (pts === 3) totalExact++;
+        if (pts != null) { roundPts += pts; totalPts += pts; }
+        const has = g.homeScore != null && g.awayScore != null;
+        let cls = '';
+        if (pts === 3) cls = 'exact'; else if (pts === 1) cls = 'outcome'; else if (pts === 0) cls = 'miss';
+        rows += `<tr>
+          <td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td>
+          <td>${has ? `${g.homeScore}–${g.awayScore}` : '—'}</td>
+          <td class="bet ${cls}">${b.h}–${b.a}</td>
+          <td>${pts != null ? pts : '—'}</td>
+        </tr>`;
+      });
+      html += `<details class="player-block">
+        <summary>${escapeHtml(r.name)} <span class="pill">${roundPts} pts</span></summary>
+        <div style="margin-top:12px"><div class="bets-grid"><table>
+          <thead><tr><th class="match">Jogo</th><th>Resultado</th><th>Aposta</th><th>Pts</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div></div>
+      </details>`;
+    });
+    html += `<div style="display:flex;gap:20px;padding:14px 8px 0;border-top:1px solid var(--line);margin-top:8px">
+      <div><div class="small">Total acumulado</div><div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600">${totalPts} pts</div></div>
+      <div><div class="small">Exatos</div><div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:var(--accent)">${totalExact}</div></div>
+    </div></section>`;
+  }
+
   document.getElementById('content').innerHTML = html;
+  if (kickoff) renderCountdownBar(round, 'countdown-mybets');
 }
 
 async function submitMyBets() {
