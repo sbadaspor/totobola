@@ -134,6 +134,36 @@
   .small { font-size: 12px; color: var(--muted); }
   .danger-zone { border-top: 1px dashed var(--line); margin-top: 24px; padding-top: 16px; }
 
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+    border: 2px solid var(--line); background: var(--line); flex-shrink: 0;
+    display: inline-block; vertical-align: middle;
+  }
+  .avatar-lg {
+    width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+    border: 3px solid var(--line); background: var(--line); display: block;
+    margin-bottom: 12px;
+  }
+  .avatar-sm {
+    width: 28px; height: 28px; border-radius: 50%; object-fit: cover;
+    border: 1px solid var(--line); background: var(--line); flex-shrink: 0;
+    display: inline-block; vertical-align: middle;
+  }
+  .avatar-placeholder {
+    background: var(--accent-soft); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 14px;
+    text-transform: uppercase;
+  }
+  .avatar-placeholder-lg {
+    font-size: 26px; width: 72px; height: 72px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-weight: 600;
+    border: 3px solid var(--line); margin-bottom: 12px; flex-shrink: 0;
+  }
+  .avatar-upload-btn { cursor: pointer; font-size: 11px; color: var(--accent); text-decoration: underline; }
+
   .login-box { max-width: 380px; margin: 40px auto; }
   .login-box .card { text-align: center; }
   .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
@@ -215,8 +245,68 @@ async function sha256(text) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// ============ AVATAR HELPERS ============
+function avatarHtml(name, size) {
+  if (!state.playerPhotos) state.playerPhotos = {};
+  const photo = state.playerPhotos[name];
+  const cls = size === 'lg' ? 'avatar-lg' : (size === 'sm' ? 'avatar-sm' : 'avatar');
+  const phCls = size === 'lg' ? 'avatar-placeholder-lg' : ('avatar-placeholder ' + cls);
+  if (photo) {
+    return `<img class="${cls}" src="${photo}" alt="${escapeAttr(name)}" title="${escapeAttr(name)}">`;
+  }
+  const initials = name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('');
+  return `<span class="${phCls}" title="${escapeAttr(name)}">${escapeHtml(initials)}</span>`;
+}
+
+async function pickPhoto(playerName) {
+  return new Promise(resolve => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/*';
+    inp.onchange = async () => {
+      const file = inp.files[0];
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = e => {
+        // Resize to max 200px to keep state small
+        const img = new Image();
+        img.onload = () => {
+          const max = 200;
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+    inp.click();
+  });
+}
+
+async function uploadPlayerPhoto(name) {
+  const data = await pickPhoto(name);
+  if (!data) return;
+  if (!state.playerPhotos) state.playerPhotos = {};
+  state.playerPhotos[name] = data;
+  await saveState();
+  renderAdmin();
+  showToast('Foto atualizada!');
+}
+
+async function removePlayerPhoto(name) {
+  if (!state.playerPhotos) return;
+  delete state.playerPhotos[name];
+  await saveState();
+  renderAdmin();
+  showToast('Foto removida.');
+}
+
 // ============ STATE ============
-let state = { currentRoundId: null, rounds: {}, players: [] };
+let state = { currentRoundId: null, rounds: {}, players: [], playerPhotos: {} };
 let isAdmin = false;
 let currentTab = 'main';
 
@@ -307,7 +397,10 @@ function renderMain() {
     standings.forEach((s, i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
-        <div style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px" onclick="showPlayer('${escapeAttr(s.name)}')">${escapeHtml(s.name)}</div>
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="showPlayer('${escapeAttr(s.name)}')">
+          ${avatarHtml(s.name, 'sm')}
+          <span style="text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px">${escapeHtml(s.name)}</span>
+        </div>
         <div class="num">${s.played}</div>
         <div class="num">${s.exact}</div>
         <div class="pts">${s.pts}</div>
@@ -354,7 +447,7 @@ function renderMain() {
     } else {
       const totals = roundTotals(round);
       html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th>`;
-      state.players.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
+      state.players.forEach(p => html += `<th><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${avatarHtml(p,'sm')}<span>${escapeHtml(p)}</span></div></th>`);
       html += `</tr></thead><tbody>`;
       round.games.forEach((g, i) => {
         html += `<tr><td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td>`;
@@ -410,8 +503,13 @@ function renderPlayer() {
   let totalPts = 0, totalExact = 0, totalOutcome = 0, totalMiss = 0;
   let html = `<section class="card">
     <button class="btn ghost" onclick="switchTab('main')" style="margin-bottom:16px">← Voltar</button>
-    <h2>${escapeHtml(name)}</h2>
-    <div class="sub">Histórico de apostas</div>`;
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px">
+      ${avatarHtml(name, 'lg')}
+      <div>
+        <h2 style="margin:0 0 2px">${escapeHtml(name)}</h2>
+        <div class="sub" style="margin:0">Histórico de apostas</div>
+      </div>
+    </div>`;
 
   const ids = Object.keys(state.rounds).slice().reverse();
   const roundsWithBets = ids.filter(rid => {
@@ -502,7 +600,7 @@ function renderHistory() {
       } else {
         html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th><th>Resultado</th>`;
         const playersInRound = Object.keys(round.bets || {}).length > 0 ? Object.keys(round.bets) : state.players;
-        playersInRound.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
+        playersInRound.forEach(p => html += `<th><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${avatarHtml(p,'sm')}<span>${escapeHtml(p)}</span></div></th>`);
         html += `</tr></thead><tbody>`;
         round.games.forEach((g, i) => {
           const has = g.homeScore != null && g.awayScore != null;
@@ -562,9 +660,17 @@ async function renderAdmin() {
     <div class="sub">Quem participa no totobola</div>
     <div id="players-list">`;
   state.players.forEach(p => {
-    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">
-      <span>${escapeHtml(p)}</span>
-      <button class="btn ghost" onclick="removePlayer('${escapeAttr(p)}')">Remover</button>
+    const hasPhoto = state.playerPhotos && state.playerPhotos[p];
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${avatarHtml(p, 'sm')}
+        <span>${escapeHtml(p)}</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="uploadPlayerPhoto('${escapeAttr(p)}')">${hasPhoto ? '🖼 Alterar foto' : '📷 Adicionar foto'}</button>
+        ${hasPhoto ? `<button class="btn ghost" style="font-size:12px;padding:6px 10px;color:var(--danger)" onclick="removePlayerPhoto('${escapeAttr(p)}')">✕</button>` : ''}
+        <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="removePlayer('${escapeAttr(p)}')">Remover</button>
+      </div>
     </div>`;
   });
   html += `</div>
