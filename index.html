@@ -1484,11 +1484,27 @@ async function fdFetch(path, params = {}) {
   return data;
 }
 
+function toApiDate(dateStr) {
+  if (!dateStr) return null;
+  // Already yyyy-MM-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) return dateStr.trim();
+  // Try to parse and reformat
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // Fetch matches for a given date range across all competitions available on free tier
 async function fdMatchesForDates(dateFrom, dateTo) {
+  const from = toApiDate(dateFrom);
+  const to   = toApiDate(dateTo);
+  if (!from || !to) throw new Error('Datas dos jogos inválidas. Verifica o formato no admin (ex: 2025-05-10).');
   const data = await fdFetch('matches', {
-    dateFrom,
-    dateTo,
+    dateFrom: from,
+    dateTo:   to,
     status: 'FINISHED,IN_PLAY,PAUSED'
   });
   return data.matches || [];
@@ -1499,8 +1515,8 @@ async function syncResults() {
   if (!round || round.games.length === 0) { showToast('Sem jogos para sincronizar.'); return; }
 
   // Collect all unique dates in the round
-  const dates = [...new Set(round.games.map(g => g.date).filter(Boolean))].sort();
-  if (dates.length === 0) { showToast('Define as datas dos jogos primeiro.'); return; }
+  const dates = [...new Set(round.games.map(g => toApiDate(g.date)).filter(Boolean))].sort();
+  if (dates.length === 0) { showToast('Define as datas dos jogos primeiro (formato: yyyy-mm-dd).'); return; }
 
   showToast('A sincronizar…');
   try {
@@ -1515,9 +1531,10 @@ async function syncResults() {
 
       // Find best matching API match for this game
       let best = null, bestScore = 0;
+      const gameDate = toApiDate(g.date);
       apiMatches.forEach(m => {
         const mDate = m.utcDate ? m.utcDate.slice(0, 10) : '';
-        if (mDate !== g.date) return; // must be same date
+        if (mDate !== gameDate) return; // must be same date
         const homeScore = matchScore(g.home, m.homeTeam.name) + matchScore(g.home, m.homeTeam.shortName || '');
         const awayScore = matchScore(g.away, m.awayTeam.name) + matchScore(g.away, m.awayTeam.shortName || '');
         const combined = (homeScore + awayScore) / 2;
