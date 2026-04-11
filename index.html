@@ -65,7 +65,7 @@
   }
   .row:last-child { border-bottom: 0; }
 
-  .standings .row-head, .standings .row { grid-template-columns: 40px 1fr 80px 80px 80px; }
+  .standings .row-head, .standings .row { grid-template-columns: 40px 36px 1fr 80px 80px 80px; }
   .standings .pts { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; text-align: right; }
   .rank { font-family: 'Fraunces', serif; font-size: 18px; color: var(--muted); }
   .rank.top { color: var(--gold); }
@@ -186,7 +186,7 @@
   .config-error code { background: #f6f5f1; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
 
   @media (max-width: 640px) {
-    .standings .row-head, .standings .row { grid-template-columns: 30px 1fr 60px 60px 70px; font-size: 13px; }
+    .standings .row-head, .standings .row { grid-template-columns: 30px 28px 1fr 60px 60px 70px; font-size: 13px; }
     .games .row-head, .games .row { grid-template-columns: 50px 1fr 80px 1fr; gap: 6px; }
     .games .gdate { font-size: 10px; }
     .wrap { padding: 20px 14px 60px; }
@@ -205,10 +205,15 @@
     <nav class="tabs">
       <button id="tab-main" class="active">Principal</button>
       <button id="tab-history">Histórico</button>
+      <button id="tab-mybets" style="display:none">⚽ As minhas apostas</button>
       <button id="tab-admin">Admin</button>
     </nav>
   </header>
   <main id="content"><div class="loading">A carregar…</div></main>
+</div>
+<div id="player-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--accent);color:#fff;padding:10px 20px;display:none;align-items:center;justify-content:space-between;font-size:13px;z-index:50;gap:12px">
+  <span id="player-banner-name"></span>
+  <button class="btn" style="background:rgba(255,255,255,0.2);font-size:12px;padding:6px 14px" onclick="logoutPlayer()">Terminar sessão</button>
 </div>
 <div id="toast" class="toast"></div>
 
@@ -306,8 +311,9 @@ async function removePlayerPhoto(name) {
 }
 
 // ============ STATE ============
-let state = { currentRoundId: null, rounds: {}, players: [], playerPhotos: {} };
+let state = { currentRoundId: null, rounds: {}, players: [], playerPhotos: {}, playerPins: {} };
 let isAdmin = false;
+let currentPlayerSession = null; // name of logged-in player (non-admin)
 let currentTab = 'main';
 
 async function loadState() {
@@ -393,14 +399,12 @@ function renderMain() {
   if (standings.length === 0 || standings.every(s => s.played === 0)) {
     html += `<div class="empty"><div class="big">Ainda sem jornadas concluídas</div>A classificação aparece quando os primeiros resultados forem inseridos.</div>`;
   } else {
-    html += `<div class="row-head"><div></div><div>Jogador</div><div class="num">Jornadas</div><div class="num">Exatos</div><div class="num">Pontos</div></div>`;
+    html += `<div class="row-head"><div></div><div></div><div>Jogador</div><div class="num">Jornadas</div><div class="num">Exatos</div><div class="num">Pontos</div></div>`;
     standings.forEach((s, i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
-        <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="showPlayer('${escapeAttr(s.name)}')">
-          ${avatarHtml(s.name, 'sm')}
-          <span style="text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px">${escapeHtml(s.name)}</span>
-        </div>
+        <div>${avatarHtml(s.name, 'sm')}</div>
+        <div style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px" onclick="showPlayer('${escapeAttr(s.name)}')">${escapeHtml(s.name)}</div>
         <div class="num">${s.played}</div>
         <div class="num">${s.exact}</div>
         <div class="pts">${s.pts}</div>
@@ -475,10 +479,11 @@ function renderMain() {
     html += `<section class="card standings">
       <h2>Resultados da Jornada Atual</h2>
       <div class="sub">Pontuação obtida nesta jornada</div>
-      <div class="row-head"><div></div><div>Jogador</div><div></div><div></div><div class="num">Pontos</div></div>`;
+      <div class="row-head"><div></div><div></div><div>Jogador</div><div></div><div></div><div class="num">Pontos</div></div>`;
     sorted.forEach(([name, pts], i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
+        <div>${avatarHtml(name, 'sm')}</div>
         <div>${escapeHtml(name)}</div>
         <div></div><div></div>
         <div class="pts">${pts}</div>
@@ -642,12 +647,33 @@ async function renderAdmin() {
         <button class="btn accent" onclick="doSetPassword()">Definir password</button>
         <div id="msg"></div>`;
     } else {
-      html += `<input type="password" id="pwd" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+      html += `<input type="password" id="pwd" placeholder="Password de admin" onkeydown="if(event.key==='Enter')doLogin()">
         <div style="height:8px"></div>
-        <button class="btn accent" onclick="doLogin()">Entrar</button>
+        <button class="btn accent" onclick="doLogin()">Entrar como admin</button>
         <div id="msg"></div>`;
     }
     html += `</div></div>`;
+
+    // Player login section
+    if (state.players && state.players.some(p => state.playerPins && state.playerPins[p])) {
+      html += `<div class="login-box" style="margin-top:0"><div class="card">
+        <h2>Área do Jogador</h2>
+        <div class="sub">Inserir as minhas apostas</div>
+        <label>O teu nome</label>
+        <select id="player-select" style="margin-bottom:8px">
+          <option value="">— escolhe o teu nome —</option>`;
+      state.players.filter(p => state.playerPins && state.playerPins[p]).forEach(p => {
+        html += `<option value="${escapeAttr(p)}">${escapeHtml(p)}</option>`;
+      });
+      html += `</select>
+        <label>O teu PIN</label>
+        <input type="password" id="player-pin" placeholder="PIN" maxlength="10" onkeydown="if(event.key==='Enter')doPlayerLogin()">
+        <div style="height:8px"></div>
+        <button class="btn" style="background:var(--accent)" onclick="doPlayerLogin()">Entrar</button>
+        <div id="player-msg"></div>
+      </div></div>`;
+    }
+
     document.getElementById('content').innerHTML = html;
     return;
   }
@@ -661,13 +687,18 @@ async function renderAdmin() {
     <div id="players-list">`;
   state.players.forEach(p => {
     const hasPhoto = state.playerPhotos && state.playerPhotos[p];
+    const hasPin = state.playerPins && state.playerPins[p];
     html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:12px">
       <div style="display:flex;align-items:center;gap:10px">
         ${avatarHtml(p, 'sm')}
-        <span>${escapeHtml(p)}</span>
+        <div>
+          <div>${escapeHtml(p)}</div>
+          <div class="small" style="margin-top:2px">${hasPin ? '🔑 PIN definido' : '⚠️ Sem PIN'}</div>
+        </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="uploadPlayerPhoto('${escapeAttr(p)}')">${hasPhoto ? '🖼 Alterar foto' : '📷 Adicionar foto'}</button>
+        <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="setPlayerPin('${escapeAttr(p)}')">${hasPin ? 'Alterar PIN' : 'Definir PIN'}</button>
+        <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="uploadPlayerPhoto('${escapeAttr(p)}')">${hasPhoto ? '🖼 Foto' : '📷 Foto'}</button>
         ${hasPhoto ? `<button class="btn ghost" style="font-size:12px;padding:6px 10px;color:var(--danger)" onclick="removePlayerPhoto('${escapeAttr(p)}')">✕</button>` : ''}
         <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="removePlayer('${escapeAttr(p)}')">Remover</button>
       </div>
@@ -882,6 +913,137 @@ async function updateBet(player, i, field, val) {
   await saveState();
 }
 
+// ============ PLAYER SESSION ============
+async function setPlayerPin(name) {
+  const pin = prompt(`PIN para ${name} (4-10 dígitos, partilha por privado):`);
+  if (!pin || pin.trim().length < 4) { if (pin !== null) alert('Mínimo 4 caracteres.'); return; }
+  if (!state.playerPins) state.playerPins = {};
+  state.playerPins[name] = await sha256(pin.trim());
+  await saveState();
+  renderAdmin();
+  showToast(`PIN de ${name} guardado.`);
+}
+
+async function doPlayerLogin() {
+  const name = document.getElementById('player-select').value;
+  const pin = document.getElementById('player-pin').value;
+  if (!name) { document.getElementById('player-msg').innerHTML = '<div class="err">Escolhe o teu nome.</div>'; return; }
+  if (!pin) { document.getElementById('player-msg').innerHTML = '<div class="err">Introduz o teu PIN.</div>'; return; }
+  const hash = await sha256(pin);
+  if (hash !== (state.playerPins || {})[name]) {
+    document.getElementById('player-msg').innerHTML = '<div class="err">PIN incorreto.</div>';
+    return;
+  }
+  currentPlayerSession = name;
+  updatePlayerBanner();
+  switchTab('mybets');
+}
+
+function logoutPlayer() {
+  currentPlayerSession = null;
+  updatePlayerBanner();
+  switchTab('main');
+}
+
+function updatePlayerBanner() {
+  const banner = document.getElementById('player-banner');
+  const nameEl = document.getElementById('player-banner-name');
+  const mybetsBtn = document.getElementById('tab-mybets');
+  if (currentPlayerSession) {
+    banner.style.display = 'flex';
+    nameEl.innerHTML = `${avatarHtml(currentPlayerSession,'sm')} <strong style="margin-left:8px">${escapeHtml(currentPlayerSession)}</strong> — sessão ativa`;
+    mybetsBtn.style.display = '';
+    document.querySelector('.wrap').style.paddingBottom = '80px';
+  } else {
+    banner.style.display = 'none';
+    mybetsBtn.style.display = 'none';
+    document.querySelector('.wrap').style.paddingBottom = '';
+  }
+}
+
+// ============ RENDER MY BETS ============
+async function renderMyBets() {
+  const name = currentPlayerSession;
+  if (!name) { switchTab('main'); return; }
+  const round = state.rounds[state.currentRoundId];
+
+  let html = `<section class="card">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      ${avatarHtml(name, 'lg')}
+      <div>
+        <h2 style="margin:0 0 2px">${escapeHtml(name)}</h2>
+        <div class="sub" style="margin:0">As minhas apostas</div>
+      </div>
+    </div>`;
+
+  if (!round || round.games.length === 0) {
+    html += `<div class="empty"><div class="big">Sem jornada ativa</div>O administrador ainda não criou a jornada atual.</div></section>`;
+    document.getElementById('content').innerHTML = html;
+    return;
+  }
+
+  const existingBets = ((round.bets || {})[name]) || [];
+  const alreadyFull = existingBets.length === round.games.length && existingBets.every(b => b && b.h != null && b.a != null);
+
+  html += `<h3 style="font-family:'Fraunces',serif;margin:0 0 4px">${escapeHtml(round.name)}</h3>
+    <div class="sub">Insere o teu prognóstico para cada jogo</div>`;
+
+  if (alreadyFull) {
+    html += `<div style="background:var(--accent-soft);border-radius:10px;padding:14px 16px;margin-bottom:18px;color:var(--accent);font-weight:500">
+      ✅ Já submeteste as tuas apostas para esta jornada. Podes alterá-las enquanto os resultados não estiverem todos inseridos.
+    </div>`;
+  }
+
+  html += `<div id="mybets-form">`;
+  round.games.forEach((g, i) => {
+    const b = existingBets[i] || {};
+    const dateStr = g.date ? formatDate(g.date) : '';
+    const timeStr = g.time ? ` ${g.time}` : '';
+    html += `<div style="margin-bottom:16px;padding:14px;border:1px solid var(--line);border-radius:10px;background:#fafaf7">
+      <div class="small" style="margin-bottom:8px">${dateStr}${timeStr}</div>
+      <div class="score-row">
+        <div class="lbl l">${escapeHtml(g.home)}</div>
+        <input type="number" min="0" id="mb-${i}-h" value="${b.h ?? ''}" placeholder="—" style="text-align:center;padding:8px 4px">
+        <div class="x">–</div>
+        <input type="number" min="0" id="mb-${i}-a" value="${b.a ?? ''}" placeholder="—" style="text-align:center;padding:8px 4px">
+        <div class="lbl">${escapeHtml(g.away)}</div>
+        <div></div>
+      </div>
+    </div>`;
+  });
+  html += `</div>
+    <div class="toolbar">
+      <button class="btn accent" onclick="submitMyBets()">💾 Guardar apostas</button>
+    </div>
+  </section>`;
+
+  document.getElementById('content').innerHTML = html;
+}
+
+async function submitMyBets() {
+  const name = currentPlayerSession;
+  const round = state.rounds[state.currentRoundId];
+  if (!name || !round) return;
+
+  if (!round.bets) round.bets = {};
+  if (!round.bets[name]) round.bets[name] = round.games.map(() => ({ h: null, a: null }));
+  while (round.bets[name].length < round.games.length) round.bets[name].push({ h: null, a: null });
+
+  let allFilled = true;
+  round.games.forEach((g, i) => {
+    const hVal = document.getElementById(`mb-${i}-h`).value;
+    const aVal = document.getElementById(`mb-${i}-a`).value;
+    const h = hVal === '' ? null : parseInt(hVal, 10);
+    const a = aVal === '' ? null : parseInt(aVal, 10);
+    round.bets[name][i] = { h: isNaN(h) ? null : h, a: isNaN(a) ? null : a };
+    if (h == null || a == null) allFilled = false;
+  });
+
+  await saveState();
+  showToast(allFilled ? '✅ Apostas guardadas!' : '⚠️ Guardado (alguns jogos sem aposta)');
+  renderMyBets();
+}
+
 // ============ HELPERS ============
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
@@ -903,17 +1065,20 @@ function showToast(msg) {
 function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + t).classList.add('active');
+  const btn = document.getElementById('tab-' + t);
+  if (btn) btn.classList.add('active');
   rerender();
 }
 function rerender() {
   if (currentTab === 'main') renderMain();
   else if (currentTab === 'history') renderHistory();
   else if (currentTab === 'player') renderPlayer();
+  else if (currentTab === 'mybets') renderMyBets();
   else renderAdmin();
 }
 document.getElementById('tab-main').onclick = () => switchTab('main');
 document.getElementById('tab-history').onclick = () => switchTab('history');
+document.getElementById('tab-mybets').onclick = () => switchTab('mybets');
 document.getElementById('tab-admin').onclick = () => switchTab('admin');
 
 // ============ INIT ============
@@ -934,7 +1099,9 @@ document.getElementById('tab-admin').onclick = () => switchTab('admin');
   sb.channel('kv-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'kv_store', filter: `key=eq.${STATE_KEY}` }, async () => {
       await loadState();
-      if (currentTab !== 'admin' || !isAdmin) rerender();
+      if (currentTab !== 'admin' || !isAdmin) {
+        if (currentTab !== 'mybets') rerender(); // don't interrupt active bet entry
+      }
     })
     .subscribe();
 })();
