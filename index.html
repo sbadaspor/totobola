@@ -338,9 +338,10 @@ async function sha256(text) {
 let countdownTimer = null;
 
 function gameDateTime(g) {
-  if (!g.date || g.date.trim() === '') return null;
+  const iso = toApiDate(g.date); // normaliza para yyyy-MM-dd
+  if (!iso) return null;
   const time = (g.time && g.time.trim() !== '') ? g.time.trim() : '00:00';
-  const dt = new Date(`${g.date.trim()}T${time}`);
+  const dt = new Date(`${iso}T${time}`);
   return isNaN(dt.getTime()) ? null : dt;
 }
 
@@ -1486,15 +1487,16 @@ async function fdFetch(path, params = {}) {
 
 function toApiDate(dateStr) {
   if (!dateStr) return null;
+  const s = dateStr.trim();
   // Already yyyy-MM-dd
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) return dateStr.trim();
-  // Try to parse and reformat
-  const d = new Date(dateStr);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // dd/mm/yyyy or dd-mm-yyyy
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  // Fallback: try native parse
+  const d = new Date(s);
   if (isNaN(d.getTime())) return null;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 // Fetch matches for a given date range across all competitions available on free tier
@@ -1600,10 +1602,11 @@ function stopAutoSync() {
 // ============ HELPERS ============
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
-function formatDate(iso) {
-  if (!iso) return '';
-  const parts = iso.split('-'); // YYYY-MM-DD
-  if (parts.length !== 3) return iso;
+function formatDate(raw) {
+  if (!raw) return '';
+  const iso = toApiDate(raw); // normaliza para yyyy-MM-dd
+  if (!iso) return raw;
+  const parts = iso.split('-');
   const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   return `${parseInt(parts[2],10)} ${months[parseInt(parts[1],10)-1]}`;
 }
