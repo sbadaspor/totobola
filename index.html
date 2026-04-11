@@ -198,27 +198,8 @@
   .countdown-bar.urgent .countdown-time { color: var(--danger); }
   .countdown-bar.locked .countdown-time { color: var(--muted); font-size: 15px; font-family: 'Inter', sans-serif; font-weight: 500; }
 
-  /* ── Mobile bets cards ── */
+  /* ── Mobile bets per-game cards ── */
   .mobile-bets { display: none; }
-  .bet-card {
-    border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px;
-    overflow: hidden; background: var(--surface);
-  }
-  .bet-card-game {
-    padding: 10px 14px; font-size: 12px; color: var(--muted);
-    border-bottom: 1px solid var(--line); background: #fafaf7;
-  }
-  .bet-card-players { display: flex; flex-direction: column; }
-  .bet-card-row {
-    display: grid; grid-template-columns: 32px 1fr 1fr; align-items: center;
-    padding: 8px 14px; border-bottom: 1px solid var(--line); gap: 8px;
-  }
-  .bet-card-row:last-child { border-bottom: 0; }
-  .bet-card-score { font-family: 'Fraunces', serif; font-weight: 600; font-size: 15px; text-align: center; }
-  .bet-card-score.exact { color: var(--accent); }
-  .bet-card-score.outcome { color: #7a5a00; }
-  .bet-card-score.miss { color: var(--danger); }
-  .bet-card-pts { text-align: right; font-size: 12px; color: var(--muted); }
 
   /* ── Share button ── */
   .share-btn {
@@ -249,7 +230,7 @@
     .games .gdate { font-size: 10px; }
     .wrap { padding: 20px 14px 60px; }
     .brand { font-size: 22px; }
-    /* On mobile, hide the horizontal bets table and show card layout */
+    /* On mobile, hide the horizontal bets table and show scroll table */
     .bets-grid-desktop { display: none !important; }
     .mobile-bets { display: block; }
     /* Compact standings on mobile */
@@ -328,12 +309,18 @@ async function sha256(text) {
 // ============ COUNTDOWN ============
 let countdownTimer = null;
 
+function gameDateTime(g) {
+  if (!g.date || g.date.trim() === '') return null;
+  const time = (g.time && g.time.trim() !== '') ? g.time.trim() : '00:00';
+  const dt = new Date(`${g.date.trim()}T${time}`);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
 function firstKickoff(round) {
   if (!round) return null;
-  const gamesWithDate = round.games.filter(g => g.date);
-  if (gamesWithDate.length === 0) return null;
-  gamesWithDate.sort((a, b) => new Date(`${a.date}T${a.time||'00:00'}`) - new Date(`${b.date}T${b.time||'00:00'}`));
-  return new Date(`${gamesWithDate[0].date}T${gamesWithDate[0].time||'00:00'}`);
+  const dates = round.games.map(gameDateTime).filter(Boolean);
+  if (dates.length === 0) return null;
+  return new Date(Math.min(...dates.map(d => d.getTime())));
 }
 
 function formatCountdown(ms) {
@@ -353,12 +340,13 @@ function renderCountdownBar(round, elId) {
   const kickoff = firstKickoff(round);
   if (!kickoff) { el.style.display = 'none'; return; }
   el.style.display = 'flex';
+  const deadline = kickoff.getTime() - 60000; // fecha 1 min antes
   const update = () => {
-    const ms = kickoff - Date.now();
+    const ms = deadline - Date.now();
     if (ms <= 0) {
       el.className = 'countdown-bar locked';
       el.querySelector('.countdown-time').textContent = '🔒 Apostas fechadas';
-      el.querySelector('.countdown-label').textContent = 'O primeiro jogo já começou';
+      el.querySelector('.countdown-label').textContent = 'Fecho 1 min antes do primeiro jogo';
       clearInterval(countdownTimer);
     } else {
       const urgent = ms < 3600000; // < 1 hora
@@ -660,39 +648,49 @@ function renderMain() {
       html += `</tbody><tfoot><tr><td class="match">Total</td>`;
       state.players.forEach(p => html += `<td>${totals[p]}</td>`);
       html += `</tr></tfoot></table></div>`;
-      // Mobile cards
+      // Mobile: one card per game, each with a simple player→bet table
       html += `<div class="mobile-bets">`;
       round.games.forEach((g, i) => {
         const has = g.homeScore != null && g.awayScore != null;
-        html += `<div class="bet-card">
-          <div class="bet-card-game">${escapeHtml(g.home)} – ${escapeHtml(g.away)}${has ? `  <strong>${g.homeScore}–${g.awayScore}</strong>` : ''}</div>
-          <div class="bet-card-players">`;
+        const dateStr = g.date ? formatDate(g.date) : '';
+        const timeStr = g.time && g.time.trim() ? ` · ${g.time}` : '';
+        html += `<div style="border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;background:var(--surface)">
+          <div style="background:#fafaf7;padding:10px 14px;border-bottom:1px solid var(--line)">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${dateStr}${timeStr}</div>
+            <div style="font-weight:600;font-size:14px">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</div>
+            ${has ? `<div style="font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:var(--accent);margin-top:2px">${g.homeScore} – ${g.awayScore}</div>` : ''}
+          </div>
+          <table style="width:100%;border-collapse:collapse">`;
         state.players.forEach(p => {
           const b = round.bets[p][i];
           const pts = pointsForBet(b, g);
-          let cls = '';
-          if (pts === 3) cls = 'exact'; else if (pts === 1) cls = 'outcome'; else if (pts === 0) cls = 'miss';
-          html += `<div class="bet-card-row">
-            ${avatarHtml(p, 'sm')}
-            <div style="font-weight:500;font-size:13px">${escapeHtml(p)}</div>
-            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
-              <span class="bet-card-score ${cls}">${b.h}–${b.a}</span>
-              <span class="bet-card-pts">${pts != null ? pts + 'pt' : ''}</span>
-            </div>
-          </div>`;
+          let color = 'var(--ink)';
+          if (pts === 3) color = 'var(--accent)';
+          else if (pts === 1) color = '#7a5a00';
+          else if (pts === 0) color = 'var(--danger)';
+          html += `<tr style="border-bottom:1px solid var(--line)">
+            <td style="padding:9px 14px">
+              <div style="display:flex;align-items:center;gap:8px">${avatarHtml(p,'sm')}<span style="font-weight:500;font-size:13px">${escapeHtml(p)}</span></div>
+            </td>
+            <td style="padding:9px 14px;text-align:right;font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:${color}">${b.h}–${b.a}</td>
+            <td style="padding:9px 14px;text-align:right;font-size:12px;color:var(--muted);width:36px">${pts != null ? pts+'pt' : ''}</td>
+          </tr>`;
         });
-        html += `</div></div>`;
+        html += `</table></div>`;
       });
-      // Mobile totals
-      html += `<div class="bet-card"><div class="bet-card-game" style="font-weight:600;color:var(--ink)">Total da jornada</div><div class="bet-card-players">`;
+      // Totals summary
+      html += `<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)">
+        <div style="background:#fafaf7;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Total da jornada</div>
+        <table style="width:100%;border-collapse:collapse">`;
       state.players.forEach(p => {
-        html += `<div class="bet-card-row">
-          ${avatarHtml(p, 'sm')}
-          <div style="font-weight:500;font-size:13px">${escapeHtml(p)}</div>
-          <div style="text-align:right;font-family:'Fraunces',serif;font-size:18px;font-weight:600">${totals[p]}</div>
-        </div>`;
+        html += `<tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:8px">${avatarHtml(p,'sm')}<span style="font-weight:500">${escapeHtml(p)}</span></div>
+          </td>
+          <td style="padding:10px 14px;text-align:right;font-family:'Fraunces',serif;font-size:20px;font-weight:700">${totals[p]}</td>
+        </tr>`;
       });
-      html += `</div></div></div>`;
+      html += `</table></div></div>`;
     }
     html += `</section>`;
   }
@@ -1190,17 +1188,9 @@ function updatePlayerBanner() {
 // Returns true if the first game of the round has already kicked off
 function roundIsLocked(round) {
   if (!round || round.games.length === 0) return false;
-  // Find the earliest game with a date set
-  const gamesWithDate = round.games.filter(g => g.date);
-  if (gamesWithDate.length === 0) return false;
-  gamesWithDate.sort((a, b) => {
-    const da = new Date(`${a.date}T${a.time || '00:00'}`);
-    const db = new Date(`${b.date}T${b.time || '00:00'}`);
-    return da - db;
-  });
-  const first = gamesWithDate[0];
-  const kickoff = new Date(`${first.date}T${first.time || '00:00'}`);
-  return Date.now() >= kickoff.getTime();
+  const kickoff = firstKickoff(round);
+  if (!kickoff) return false;
+  return Date.now() >= kickoff.getTime() - 60000; // fecha 1 min antes
 }
 
 async function renderMyBets() {
