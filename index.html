@@ -81,6 +81,7 @@
     background: var(--accent-soft); color: var(--accent); padding: 4px 10px; border-radius: 8px;
   }
   .games .score.empty { background: transparent; color: var(--muted); font-weight: 400; font-style: italic; font-family: 'Inter', sans-serif; font-size: 13px; }
+  .games .score.live { background: #fff3e0; color: #b85c00; }
 
   .bets-grid { overflow-x: auto; }
   .bets-grid table { width: 100%; border-collapse: collapse; min-width: 500px; }
@@ -244,6 +245,10 @@
   #share-img { width: 100%; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--line); }
   #share-box .btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: .3; }
+  }
+
   @media (max-width: 640px) {
     .standings .row-head, .standings .row { grid-template-columns: 30px 28px 1fr 60px 60px 70px; font-size: 13px; }
     .games .row-head, .games .row { grid-template-columns: 50px 1fr 80px 1fr; gap: 6px; }
@@ -299,6 +304,9 @@
 // 👇 Substituir estes dois valores pelos do teu projeto Supabase (ver README.md)
 const SUPABASE_URL = 'https://yeyorbmcojyyujokomjc.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleW9yYm1jb2p5eXVqb2tvbWpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NTgyMzIsImV4cCI6MjA5MTMzNDIzMn0.zB2h1j4dV71mUBN3uxiAwP4WgLoV1XCP9-BqLWm5cwg';
+
+// football-data.org API token
+const FD_TOKEN = '6e2af21df25342c1918d747a0c5a7310';
 
 // ============ INIT SUPABASE ============
 let sb = null;
@@ -622,13 +630,15 @@ function renderMain() {
       const has = g.homeScore != null && g.awayScore != null;
       const dateStr = g.date ? formatDate(g.date) : '';
       const timeStr = g.time || '';
+      const isLive = g.apiStatus === 'live';
       const scoreContent = has
         ? `${g.homeScore} – ${g.awayScore}`
         : (timeStr ? timeStr : 'por jogar');
+      const scoreClass = has ? (isLive ? 'live' : '') : 'empty';
       html += `<div class="row">
         <div class="gdate">${dateStr}</div>
         <div class="home">${escapeHtml(g.home)}</div>
-        <div class="score ${has ? '' : 'empty'}">${scoreContent}</div>
+        <div class="score ${scoreClass}">${isLive ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#e65100;margin-right:5px;animation:pulse 1s infinite;vertical-align:middle"></span>' : ''}${scoreContent}</div>
         <div class="away">${escapeHtml(g.away)}</div>
       </div>`;
     });
@@ -1005,15 +1015,24 @@ async function renderAdmin() {
       </div>`;
 
     if (round.games.length > 0) {
-      html += `<div style="height:24px"></div><label>Resultados finais</label>`;
+      html += `<div style="height:24px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <label style="margin:0">Resultados finais</label>
+          <button class="btn accent" style="font-size:12px;padding:7px 14px" onclick="syncResults()">🔄 Sincronizar com API</button>
+        </div>`;
       round.games.forEach((g, i) => {
-        html += `<div class="score-row">
+        const isLive = g.apiStatus === 'live';
+        const isFinished = g.apiStatus === 'finished';
+        const statusBadge = isLive
+          ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#b85c00;background:#fff3e0;border-radius:999px;padding:2px 8px"><span style="width:6px;height:6px;border-radius:50%;background:#e65100;display:inline-block;animation:pulse 1s infinite"></span>AO VIVO</span>`
+          : isFinished ? `<span style="font-size:11px;color:var(--muted);background:var(--line);border-radius:999px;padding:2px 8px">FINAL</span>` : '';
+        html += `<div class="score-row" style="align-items:center">
           <div class="lbl l">${escapeHtml(g.home)}</div>
           <input type="number" min="0" value="${g.homeScore ?? ''}" onchange="updateScore(${i},'homeScore',this.value)">
           <div class="x">–</div>
           <input type="number" min="0" value="${g.awayScore ?? ''}" onchange="updateScore(${i},'awayScore',this.value)">
           <div class="lbl">${escapeHtml(g.away)}</div>
-          <div></div>
+          <div>${statusBadge}</div>
         </div>`;
       });
     }
@@ -1430,6 +1449,129 @@ function initCarousel() {
   wrap.addEventListener('mouseleave', pointerEnd);
 }
 
+// ============ FOOTBALL-DATA SYNC ============
+
+// Normalize team name for fuzzy matching
+function normName(s) {
+  return (s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/\bsc\b|\bfc\b|\bsport\b|\bclube\b|\bcf\b|\bcp\b|\bsad\b/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function matchScore(a, b) {
+  const na = normName(a), nb = normName(b);
+  if (na === nb) return 1;
+  const wa = new Set(na.split(' ').filter(w => w.length > 2));
+  const wb = new Set(nb.split(' ').filter(w => w.length > 2));
+  const common = [...wa].filter(w => wb.has(w)).length;
+  if (common === 0) return 0;
+  return common / Math.max(wa.size, wb.size);
+}
+
+async function fdFetch(path) {
+  const res = await fetch(`https://api.football-data.org/v4/${path}`, {
+    headers: { 'X-Auth-Token': FD_TOKEN }
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
+
+// Fetch matches for a given date range across all competitions available on free tier
+async function fdMatchesForDates(dateFrom, dateTo) {
+  // Free tier allows: PL, PD, BL1, SA, FL1, DED, PPL, CL, EL, ECNL, BSA, MLS, WC, EC
+  // PPL = Primeira Liga Portugal
+  const data = await fdFetch(`matches?dateFrom=${dateFrom}&dateTo=${dateTo}&status=FINISHED,IN_PLAY,PAUSED`);
+  return data.matches || [];
+}
+
+async function syncResults() {
+  const round = state.rounds[state.currentRoundId];
+  if (!round || round.games.length === 0) { showToast('Sem jogos para sincronizar.'); return; }
+
+  // Collect all unique dates in the round
+  const dates = [...new Set(round.games.map(g => g.date).filter(Boolean))].sort();
+  if (dates.length === 0) { showToast('Define as datas dos jogos primeiro.'); return; }
+
+  showToast('A sincronizar…');
+  try {
+    const dateFrom = dates[0];
+    const dateTo = dates[dates.length - 1];
+    const apiMatches = await fdMatchesForDates(dateFrom, dateTo);
+
+    let updated = 0, notFound = [];
+
+    round.games.forEach((g, i) => {
+      if (!g.home || !g.away || !g.date) return;
+
+      // Find best matching API match for this game
+      let best = null, bestScore = 0;
+      apiMatches.forEach(m => {
+        const mDate = m.utcDate ? m.utcDate.slice(0, 10) : '';
+        if (mDate !== g.date) return; // must be same date
+        const homeScore = matchScore(g.home, m.homeTeam.name) + matchScore(g.home, m.homeTeam.shortName || '');
+        const awayScore = matchScore(g.away, m.awayTeam.name) + matchScore(g.away, m.awayTeam.shortName || '');
+        const combined = (homeScore + awayScore) / 2;
+        if (combined > bestScore) { bestScore = combined; best = m; }
+      });
+
+      const THRESHOLD = 0.35;
+      if (best && bestScore >= THRESHOLD) {
+        const score = best.score;
+        const isLive = ['IN_PLAY','PAUSED','HALF_TIME'].includes(best.status);
+        const isFinished = best.status === 'FINISHED';
+        const ft = score.fullTime;
+        if (ft && ft.home != null && ft.away != null) {
+          round.games[i].homeScore = ft.home;
+          round.games[i].awayScore = ft.away;
+          round.games[i].apiStatus = isLive ? 'live' : (isFinished ? 'finished' : best.status);
+          round.games[i].apiMatch = best.id;
+          updated++;
+        } else if (isLive) {
+          const half = score.halfTime;
+          if (half && half.home != null) {
+            round.games[i].homeScore = half.home;
+            round.games[i].awayScore = half.away;
+            round.games[i].apiStatus = 'live';
+            updated++;
+          }
+        }
+      } else {
+        notFound.push(`${g.home} – ${g.away}`);
+      }
+    });
+
+    await saveState();
+    rerender();
+
+    if (notFound.length > 0) {
+      showToast(`✅ ${updated} atualizado(s). Não encontrado: ${notFound.join(', ')}`);
+    } else {
+      showToast(`✅ ${updated} resultado(s) atualizado(s).`);
+    }
+  } catch(e) {
+    showToast('Erro na API: ' + e.message);
+  }
+}
+
+// Auto-sync: poll every 60s when there are live games
+let autoSyncTimer = null;
+function startAutoSync() {
+  stopAutoSync();
+  autoSyncTimer = setInterval(async () => {
+    const round = state.rounds[state.currentRoundId];
+    if (!round) return;
+    const hasLive = round.games.some(g => g.apiStatus === 'live');
+    const locked = roundIsLocked(round);
+    if (locked) await syncResults();
+    else if (hasLive) await syncResults();
+  }, 60000);
+}
+function stopAutoSync() {
+  if (autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
+}
+
 // ============ HELPERS ============
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
@@ -1480,6 +1622,7 @@ document.getElementById('tab-admin').onclick = () => switchTab('admin');
 
   await loadState();
   renderMain();
+  startAutoSync();
 
   // Realtime: refresh when data changes from another user
   sb.channel('kv-changes')
