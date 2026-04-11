@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Totobola entre Amigos</title>
+<title>Totobola</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
@@ -264,8 +264,7 @@
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      Toto<span class="dot">·</span>bola
-      <small>Dashboard entre amigos</small>
+      Totobola
     </div>
     <nav class="tabs">
       <button id="tab-main" class="active">Principal</button>
@@ -687,34 +686,24 @@ function renderMain() {
         state.players.forEach(p => {
           const b = round.bets[p][i];
           const pts = pointsForBet(b, g);
-          let color = 'var(--ink)';
-          if (pts === 3) color = 'var(--accent)';
-          else if (pts === 1) color = '#7a5a00';
-          else if (pts === 0) color = 'var(--danger)';
+          let bgColor = 'transparent', textColor = 'var(--ink)';
+          if (pts === 3) { bgColor = 'var(--accent-soft)'; textColor = 'var(--accent)'; }
+          else if (pts === 1) { bgColor = '#fff5d9'; textColor = '#7a5a00'; }
+          else if (pts === 0) { bgColor = '#fbe4df'; textColor = 'var(--danger)'; }
+          const ptsLabel = pts != null ? pts + ' pts' : '';
           html += `<tr style="border-bottom:1px solid var(--line)">
             <td style="padding:9px 14px"><div style="display:flex;align-items:center;gap:8px">${avatarHtml(p,'sm')}<span style="font-weight:500;font-size:13px">${escapeHtml(p)}</span></div></td>
-            <td style="padding:9px 14px;text-align:right;font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:${color}">${b.h}–${b.a}</td>
-            <td style="padding:9px 14px;text-align:right;font-size:12px;color:var(--muted);width:36px">${pts != null ? pts+'pt' : ''}</td>
+            <td style="padding:6px 8px;text-align:right">
+              <span style="display:inline-block;background:${bgColor};color:${textColor};font-family:'Fraunces',serif;font-size:15px;font-weight:600;padding:3px 10px;border-radius:6px">${b.h}–${b.a}</span>
+            </td>
+            <td style="padding:9px 14px;text-align:right;font-size:12px;color:var(--muted);width:44px">${ptsLabel}</td>
           </tr>`;
         });
         html += `</table></div>`;
       });
-      // Last slide: totals
-      html += `<div class="carousel-slide">
-        <div style="background:#fafaf7;padding:10px 14px;border-bottom:1px solid var(--line)">
-          <div style="font-weight:600;font-size:14px">Total da jornada</div>
-        </div>
-        <table style="width:100%;border-collapse:collapse">`;
-      state.players.forEach(p => {
-        html += `<tr style="border-bottom:1px solid var(--line)">
-          <td style="padding:10px 14px"><div style="display:flex;align-items:center;gap:8px">${avatarHtml(p,'sm')}<span style="font-weight:500">${escapeHtml(p)}</span></div></td>
-          <td style="padding:10px 14px;text-align:right;font-family:'Fraunces',serif;font-size:20px;font-weight:700">${totals[p]} pts</td>
-        </tr>`;
-      });
-      html += `</table></div>`;
       html += `</div></div>
         <div class="carousel-nav" id="bets-nav">`;
-      for (let i = 0; i <= totalGames; i++) {
+      for (let i = 0; i < totalGames; i++) {
         html += `<button class="carousel-dot ${i===0?'active':''}" onclick="carouselGoTo(${i})" aria-label="Jogo ${i+1}"></button>`;
       }
       html += `</div></div>`;
@@ -728,14 +717,13 @@ function renderMain() {
     html += `<section class="card standings">
       <h2>Resultados da Jornada Atual</h2>
       <div class="sub">Pontuação obtida nesta jornada</div>
-      <div class="row-head"><div></div><div></div><div>Jogador</div><div class="num"></div><div class="num"></div><div class="num">Pontos</div></div>`;
+      <div class="row-head"><div></div><div></div><div>Jogador</div><div class="num" style="grid-column:span 3;text-align:right">Pontos</div></div>`;
     sorted.forEach(([name, pts], i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
         <div>${avatarHtml(name, 'sm')}</div>
         <div>${escapeHtml(name)}</div>
-        <div></div><div></div>
-        <div class="pts">${pts}</div>
+        <div class="pts" style="grid-column:span 3;text-align:right">${pts} pts</div>
       </div>`;
     });
     html += `</section>`;
