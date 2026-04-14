@@ -169,7 +169,7 @@
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      Toto<span class="dot">·</span>bola
+      totobola
       <small>Dashboard entre amigos</small>
     </div>
     <nav class="tabs">
@@ -298,6 +298,17 @@ function renderMain() {
   const standings = generalStandings();
   let html = '';
 
+  // "A minha aposta" CTA block (topo)
+  if (round && round.games.length > 0) {
+    const locked = isRoundLocked(round);
+    const dl = roundDeadline(round);
+    html += `<section class="card" style="background:linear-gradient(135deg,#fff,#fafaf7)">
+      <h2>A minha aposta</h2>
+      <div class="sub">${locked ? 'Apostas encerradas' : (dl ? `Fecha às ${new Date(dl).toLocaleString('pt-PT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}` : 'Submete o teu palpite')}</div>
+      <button class="btn accent" onclick="switchTab('mybet')" ${locked?'disabled style="opacity:.5;cursor:not-allowed"':''}>${locked?'Apostas fechadas':'Entrar / Editar a minha aposta'}</button>
+    </section>`;
+  }
+
   html += `<section class="card standings">
     <h2>Classificação Geral</h2>
     <div style="margin-bottom:18px"></div>`;
@@ -340,17 +351,6 @@ function renderMain() {
     });
   }
   html += `</section>`;
-
-  // "A minha aposta" CTA block
-  if (round && round.games.length > 0) {
-    const locked = isRoundLocked(round);
-    const dl = roundDeadline(round);
-    html += `<section class="card" style="background:linear-gradient(135deg,#fff,#fafaf7)">
-      <h2>A minha aposta</h2>
-      <div class="sub">${locked ? 'Apostas encerradas' : (dl ? `Fecha às ${new Date(dl).toLocaleString('pt-PT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}` : 'Submete o teu palpite')}</div>
-      <button class="btn accent" onclick="switchTab('mybet')" ${locked?'disabled style="opacity:.5;cursor:not-allowed"':''}>${locked?'Apostas fechadas':'Entrar / Editar a minha aposta'}</button>
-    </section>`;
-  }
 
   if (round && round.games.length > 0) {
     const allIn = allBetsSubmitted(round);
@@ -1028,7 +1028,8 @@ function showToast(msg) {
 function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + t).classList.add('active');
+  const btn = document.getElementById('tab-' + t);
+  if (btn) btn.classList.add('active');
   rerender();
 }
 function rerender() {
