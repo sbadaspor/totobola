@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Totobola</title>
+<title>Totobola entre Amigos</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
@@ -65,7 +65,7 @@
   }
   .row:last-child { border-bottom: 0; }
 
-  .standings .row-head, .standings .row { grid-template-columns: 40px 36px 1fr 80px 80px 80px; }
+  .standings .row-head, .standings .row { grid-template-columns: 40px 1fr 80px 80px 80px; }
   .standings .pts { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; text-align: right; }
   .rank { font-family: 'Fraunces', serif; font-size: 18px; color: var(--muted); }
   .rank.top { color: var(--gold); }
@@ -134,36 +134,6 @@
   .small { font-size: 12px; color: var(--muted); }
   .danger-zone { border-top: 1px dashed var(--line); margin-top: 24px; padding-top: 16px; }
 
-  .avatar {
-    width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
-    border: 2px solid var(--line); background: var(--line); flex-shrink: 0;
-    display: inline-block; vertical-align: middle;
-  }
-  .avatar-lg {
-    width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
-    border: 3px solid var(--line); background: var(--line); display: block;
-    margin-bottom: 12px;
-  }
-  .avatar-sm {
-    width: 28px; height: 28px; border-radius: 50%; object-fit: cover;
-    border: 1px solid var(--line); background: var(--line); flex-shrink: 0;
-    display: inline-block; vertical-align: middle;
-  }
-  .avatar-placeholder {
-    background: var(--accent-soft); color: var(--accent);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-family: 'Fraunces', serif; font-weight: 600; font-size: 14px;
-    text-transform: uppercase;
-  }
-  .avatar-placeholder-lg {
-    font-size: 26px; width: 72px; height: 72px; border-radius: 50%;
-    background: var(--accent-soft); color: var(--accent);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Fraunces', serif; font-weight: 600;
-    border: 3px solid var(--line); margin-bottom: 12px; flex-shrink: 0;
-  }
-  .avatar-upload-btn { cursor: pointer; font-size: 11px; color: var(--accent); text-decoration: underline; }
-
   .login-box { max-width: 380px; margin: 40px auto; }
   .login-box .card { text-align: center; }
   .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
@@ -185,77 +155,12 @@
   .config-error h2 { color: var(--danger); margin-top: 0; }
   .config-error code { background: #f6f5f1; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
 
-  /* ── Countdown ── */
-  .countdown-bar {
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
-    background: #fff8e6; border: 1px solid #f0d88a; border-radius: 10px;
-    padding: 12px 16px; margin-bottom: 20px;
-  }
-  .countdown-bar.urgent { background: #fbe4df; border-color: #e8b4aa; }
-  .countdown-bar.locked { background: #f0f0ee; border-color: var(--line); }
-  .countdown-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  .countdown-time { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; color: #7a5a00; letter-spacing: .02em; }
-  .countdown-bar.urgent .countdown-time { color: var(--danger); }
-  .countdown-bar.locked .countdown-time { color: var(--muted); font-size: 15px; font-family: 'Inter', sans-serif; font-weight: 500; }
-
-  /* ── Mobile bets per-game cards ── */
-  .mobile-bets { display: none; }
-
-  /* ── Carousel ── */
-  .carousel-wrap {
-    overflow: hidden; border: 1px solid var(--line); border-radius: 10px;
-    background: var(--surface); touch-action: pan-y;
-  }
-  .carousel-track {
-    display: flex; transition: transform .3s ease; will-change: transform;
-  }
-  .carousel-slide {
-    min-width: 100%; flex-shrink: 0; overflow: hidden;
-  }
-  .carousel-nav {
-    display: flex; justify-content: center; gap: 6px; margin-top: 10px;
-  }
-  .carousel-dot {
-    width: 8px; height: 8px; border-radius: 50%; border: none;
-    background: var(--line); cursor: pointer; padding: 0; transition: background .15s, transform .15s;
-  }
-  .carousel-dot.active { background: var(--accent); transform: scale(1.3); }
-
-  /* ── Share button ── */
-  .share-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: transparent; border: 1px solid var(--line); color: var(--muted);
-    padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 12px;
-    cursor: pointer; transition: all .15s;
-  }
-  .share-btn:hover { border-color: var(--ink); color: var(--ink); }
-
-  /* ── Share canvas overlay ── */
-  #share-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
-    z-index: 200; align-items: center; justify-content: center; padding: 20px;
-  }
-  #share-overlay.show { display: flex; }
-  #share-box {
-    background: #fff; border-radius: 16px; padding: 24px; max-width: 420px; width: 100%;
-    box-shadow: 0 8px 40px rgba(0,0,0,.2); text-align: center;
-  }
-  #share-box h3 { margin: 0 0 14px; font-family: 'Fraunces', serif; }
-  #share-img { width: 100%; border-radius: 8px; margin-bottom: 14px; border: 1px solid var(--line); }
-  #share-box .btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-
   @media (max-width: 640px) {
-    .standings .row-head, .standings .row { grid-template-columns: 30px 28px 1fr 60px 60px 70px; font-size: 13px; }
+    .standings .row-head, .standings .row { grid-template-columns: 30px 1fr 60px 60px 70px; font-size: 13px; }
     .games .row-head, .games .row { grid-template-columns: 50px 1fr 80px 1fr; gap: 6px; }
     .games .gdate { font-size: 10px; }
     .wrap { padding: 20px 14px 60px; }
     .brand { font-size: 22px; }
-    /* On mobile, hide the horizontal bets table and show scroll table */
-    .bets-grid-desktop { display: none !important; }
-    .mobile-bets { display: block; }
-    /* Compact standings on mobile */
-    .standings .row-head .num, .standings .row .num { display: none; }
-    .standings .row-head, .standings .row { grid-template-columns: 30px 28px 1fr 80px; }
   }
 </style>
 </head>
@@ -264,40 +169,25 @@
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      Totobola
+      Toto<span class="dot">·</span>bola
+      <small>Dashboard entre amigos</small>
     </div>
     <nav class="tabs">
       <button id="tab-main" class="active">Principal</button>
       <button id="tab-history">Histórico</button>
-      <button id="tab-mybets" style="display:none">⚽ As minhas apostas</button>
       <button id="tab-admin">Admin</button>
     </nav>
   </header>
   <main id="content"><div class="loading">A carregar…</div></main>
 </div>
-<div id="share-overlay" onclick="if(event.target===this)closeShare()">
-  <div id="share-box">
-    <h3>📤 Partilhar Classificação</h3>
-    <img id="share-img" alt="classificação">
-    <div class="btns">
-      <button class="btn accent" onclick="downloadShare()">⬇ Guardar imagem</button>
-      <button class="btn ghost" onclick="closeShare()">Fechar</button>
-    </div>
-  </div>
-</div>
-<div id="player-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--accent);color:#fff;padding:10px 20px;display:none;align-items:center;justify-content:space-between;font-size:13px;z-index:50;gap:12px">
-  <span id="player-banner-name"></span>
-  <button class="btn" style="background:rgba(255,255,255,0.2);font-size:12px;padding:6px 14px" onclick="logoutPlayer()">Terminar sessão</button>
-</div>
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 // ============ CONFIG ============
 // 👇 Substituir estes dois valores pelos do teu projeto Supabase (ver README.md)
-const SUPABASE_URL = 'https://yeyorbmcojyyujokomjc.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleW9yYm1jb2p5eXVqb2tvbWpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NTgyMzIsImV4cCI6MjA5MTMzNDIzMn0.zB2h1j4dV71mUBN3uxiAwP4WgLoV1XCP9-BqLWm5cwg';
+const SUPABASE_URL = 'https://twvseqpnxdeddudsybjt.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3dnNlcXBueGRlZGR1ZHN5Ymp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNjI1NTcsImV4cCI6MjA5MTczODU1N30.8S9Lap0HNSHI-B39JksmTZeKuzh-QEG64K9g5x-icRU';
 
 // ============ INIT SUPABASE ============
 let sb = null;
@@ -325,177 +215,9 @@ async function sha256(text) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// ============ COUNTDOWN ============
-let countdownTimer = null;
-
-function gameDateTime(g) {
-  if (!g.date || g.date.trim() === '') return null;
-  const time = (g.time && g.time.trim() !== '') ? g.time.trim() : '00:00';
-  const dt = new Date(`${g.date.trim()}T${time}`);
-  return isNaN(dt.getTime()) ? null : dt;
-}
-
-function firstKickoff(round) {
-  if (!round) return null;
-  const dates = round.games.map(gameDateTime).filter(Boolean);
-  if (dates.length === 0) return null;
-  return new Date(Math.min(...dates.map(d => d.getTime())));
-}
-
-function formatCountdown(ms) {
-  if (ms <= 0) return null;
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (d > 0) return `${d}d ${h.toString().padStart(2,'0')}h ${m.toString().padStart(2,'0')}m`;
-  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-}
-
-function renderCountdownBar(round, elId) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  const kickoff = firstKickoff(round);
-  if (!kickoff) { el.style.display = 'none'; return; }
-  el.style.display = 'flex';
-  const deadline = kickoff.getTime() - 60000; // fecha 1 min antes
-  const update = () => {
-    const ms = deadline - Date.now();
-    if (ms <= 0) {
-      el.className = 'countdown-bar locked';
-      el.querySelector('.countdown-time').textContent = '🔒 Apostas fechadas';
-      el.querySelector('.countdown-label').textContent = 'Fecho 1 min antes do primeiro jogo';
-      clearInterval(countdownTimer);
-    } else {
-      const urgent = ms < 3600000; // < 1 hora
-      el.className = 'countdown-bar' + (urgent ? ' urgent' : '');
-      el.querySelector('.countdown-time').textContent = formatCountdown(ms);
-      el.querySelector('.countdown-label').textContent = 'Fecho das apostas em';
-    }
-  };
-  clearInterval(countdownTimer);
-  update();
-  countdownTimer = setInterval(update, 1000);
-}
-
-// ============ SHARE ============
-let shareDataUrl = null;
-
-async function openShare() {
-  // Build an off-screen standings card to screenshot
-  const standings = generalStandings();
-  const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;left:-9999px;top:0;width:440px;background:#f6f5f1;padding:24px;font-family:Inter,sans-serif;font-size:14px;border-radius:16px;';
-  div.innerHTML = `
-    <div style="font-family:Fraunces,serif;font-weight:600;font-size:22px;margin-bottom:4px;letter-spacing:-0.02em">
-      Toto<span style="color:#1e5b3a">·</span>bola
-    </div>
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#6b6960;margin-bottom:18px">Classificação Geral</div>
-    ${standings.filter(s => s.played > 0).map((s, i) => {
-      const photo = (state.playerPhotos || {})[s.name];
-      const initials = s.name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('');
-      const avatarStyle = `width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:Fraunces,serif;font-weight:600;font-size:13px;flex-shrink:0;overflow:hidden;border:2px solid #e6e3da;`;
-      const avatarEl = photo
-        ? `<img src="${photo}" style="${avatarStyle}object-fit:cover;">`
-        : `<span style="${avatarStyle}background:#e8f0ea;color:#1e5b3a;">${initials}</span>`;
-      return `<div style="display:grid;grid-template-columns:32px 32px 1fr 60px;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid #e6e3da;">
-        <div style="font-family:Fraunces,serif;font-size:17px;color:${i===0?'#c89b3c':'#6b6960'}">${i+1}</div>
-        ${avatarEl}
-        <div style="font-weight:500">${s.name}</div>
-        <div style="font-family:Fraunces,serif;font-size:18px;font-weight:600;text-align:right">${s.pts}</div>
-      </div>`;
-    }).join('')}
-    <div style="margin-top:14px;font-size:11px;color:#6b6960;text-align:right">gerado em ${new Date().toLocaleDateString('pt-PT')}</div>
-  `;
-  document.body.appendChild(div);
-  try {
-    const canvas = await html2canvas(div, { scale: 2, backgroundColor: '#f6f5f1', logging: false });
-    shareDataUrl = canvas.toDataURL('image/png');
-    document.getElementById('share-img').src = shareDataUrl;
-    document.getElementById('share-overlay').classList.add('show');
-  } catch(e) {
-    showToast('Erro ao gerar imagem.');
-  }
-  document.body.removeChild(div);
-}
-
-function closeShare() {
-  document.getElementById('share-overlay').classList.remove('show');
-}
-
-function downloadShare() {
-  if (!shareDataUrl) return;
-  const a = document.createElement('a');
-  a.href = shareDataUrl;
-  a.download = 'classificacao-totobola.png';
-  a.click();
-}
-
-// ============ AVATAR HELPERS ============
-function avatarHtml(name, size) {
-  if (!state.playerPhotos) state.playerPhotos = {};
-  const photo = state.playerPhotos[name];
-  const cls = size === 'lg' ? 'avatar-lg' : (size === 'sm' ? 'avatar-sm' : 'avatar');
-  const phCls = size === 'lg' ? 'avatar-placeholder-lg' : ('avatar-placeholder ' + cls);
-  if (photo) {
-    return `<img class="${cls}" src="${photo}" alt="${escapeAttr(name)}" title="${escapeAttr(name)}">`;
-  }
-  const initials = name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('');
-  return `<span class="${phCls}" title="${escapeAttr(name)}">${escapeHtml(initials)}</span>`;
-}
-
-async function pickPhoto(playerName) {
-  return new Promise(resolve => {
-    const inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'image/*';
-    inp.onchange = async () => {
-      const file = inp.files[0];
-      if (!file) return resolve(null);
-      const reader = new FileReader();
-      reader.onload = e => {
-        // Resize to max 200px to keep state small
-        const img = new Image();
-        img.onload = () => {
-          const max = 200;
-          const scale = Math.min(1, max / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.82));
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    };
-    inp.click();
-  });
-}
-
-async function uploadPlayerPhoto(name) {
-  const data = await pickPhoto(name);
-  if (!data) return;
-  if (!state.playerPhotos) state.playerPhotos = {};
-  state.playerPhotos[name] = data;
-  await saveState();
-  renderAdmin();
-  showToast('Foto atualizada!');
-}
-
-async function removePlayerPhoto(name) {
-  if (!state.playerPhotos) return;
-  delete state.playerPhotos[name];
-  await saveState();
-  renderAdmin();
-  showToast('Foto removida.');
-}
-
 // ============ STATE ============
-let state = { currentRoundId: null, rounds: {}, players: [], playerPhotos: {}, playerPins: {} };
+let state = { currentRoundId: null, rounds: {}, players: [] };
 let isAdmin = false;
-let currentPlayerSession = null; // name of logged-in player (non-admin)
 let currentTab = 'main';
 
 async function loadState() {
@@ -575,32 +297,16 @@ function renderMain() {
   const standings = generalStandings();
   let html = '';
 
-  // Countdown bar (only when there's an active round with dates)
-  const kickoff = firstKickoff(round);
-  if (kickoff) {
-    html += `<div id="countdown-main" class="countdown-bar">
-      <div>
-        <div class="countdown-label">Fecho das apostas em</div>
-        <div class="countdown-time">…</div>
-      </div>
-      <div style="font-size:12px;color:var(--muted)">${round ? escapeHtml(round.name) : ''}</div>
-    </div>`;
-  }
-
-  html += `<section class="card standings" id="standings-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
-      <h2 style="margin:0">Classificação Geral</h2>
-      <button class="share-btn" onclick="openShare()">📤 Partilhar</button>
-    </div>
-    <div style="margin-bottom:14px"></div>`;
+  html += `<section class="card standings">
+    <h2>Classificação Geral</h2>
+    <div style="margin-bottom:18px"></div>`;
   if (standings.length === 0 || standings.every(s => s.played === 0)) {
     html += `<div class="empty"><div class="big">Ainda sem jornadas concluídas</div>A classificação aparece quando os primeiros resultados forem inseridos.</div>`;
   } else {
-    html += `<div class="row-head"><div></div><div></div><div>Jogador</div><div class="num">Jornadas</div><div class="num">Exatos</div><div class="num">Pontos</div></div>`;
+    html += `<div class="row-head"><div></div><div>Jogador</div><div class="num">Jornadas</div><div class="num">Exatos</div><div class="num">Pontos</div></div>`;
     standings.forEach((s, i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
-        <div>${avatarHtml(s.name, 'sm')}</div>
         <div style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px" onclick="showPlayer('${escapeAttr(s.name)}')">${escapeHtml(s.name)}</div>
         <div class="num">${s.played}</div>
         <div class="num">${s.exact}</div>
@@ -647,9 +353,8 @@ function renderMain() {
       html += `<div class="empty"><div class="big">🔒 Apostas ocultas</div>As apostas ficam visíveis quando todos submeterem.<br><span class="small">${submitted} de ${state.players.length} jogadores submeteram.</span></div>`;
     } else {
       const totals = roundTotals(round);
-      // Desktop table
-      html += `<div class="bets-grid bets-grid-desktop"><table><thead><tr><th class="match">Jogo</th>`;
-      state.players.forEach(p => html += `<th><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${avatarHtml(p,'sm')}<span>${escapeHtml(p)}</span></div></th>`);
+      html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th>`;
+      state.players.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
       html += `</tr></thead><tbody>`;
       round.games.forEach((g, i) => {
         html += `<tr><td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td>`;
@@ -667,46 +372,6 @@ function renderMain() {
       html += `</tbody><tfoot><tr><td class="match">Total</td>`;
       state.players.forEach(p => html += `<td>${totals[p]}</td>`);
       html += `</tr></tfoot></table></div>`;
-      // Mobile: swipeable carousel — one game table at a time
-      const totalGames = round.games.length;
-      html += `<div class="mobile-bets">
-        <div class="carousel-wrap" id="bets-carousel">
-          <div class="carousel-track" id="bets-track">`;
-      round.games.forEach((g, i) => {
-        const has = g.homeScore != null && g.awayScore != null;
-        const dateStr = g.date ? formatDate(g.date) : '';
-        const timeStr = g.time && g.time.trim() ? ` · ${g.time}` : '';
-        html += `<div class="carousel-slide">
-          <div style="background:#fafaf7;padding:10px 14px;border-bottom:1px solid var(--line)">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${dateStr}${timeStr}</div>
-            <div style="font-weight:600;font-size:14px">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</div>
-            ${has ? `<div style="font-family:'Fraunces',serif;font-size:15px;font-weight:700;color:var(--accent);margin-top:2px">${g.homeScore} – ${g.awayScore}</div>` : ''}
-          </div>
-          <table style="width:100%;border-collapse:collapse">`;
-        state.players.forEach(p => {
-          const b = round.bets[p][i];
-          const pts = pointsForBet(b, g);
-          let bgColor = 'transparent', textColor = 'var(--ink)';
-          if (pts === 3) { bgColor = 'var(--accent-soft)'; textColor = 'var(--accent)'; }
-          else if (pts === 1) { bgColor = '#fff5d9'; textColor = '#7a5a00'; }
-          else if (pts === 0) { bgColor = '#fbe4df'; textColor = 'var(--danger)'; }
-          const ptsLabel = pts != null ? pts + ' pts' : '';
-          html += `<tr style="border-bottom:1px solid var(--line)">
-            <td style="padding:9px 14px"><div style="display:flex;align-items:center;gap:8px">${avatarHtml(p,'sm')}<span style="font-weight:500;font-size:13px">${escapeHtml(p)}</span></div></td>
-            <td style="padding:6px 8px;text-align:right">
-              <span style="display:inline-block;background:${bgColor};color:${textColor};font-family:'Fraunces',serif;font-size:15px;font-weight:600;padding:3px 10px;border-radius:6px">${b.h}–${b.a}</span>
-            </td>
-            <td style="padding:9px 14px;text-align:right;font-size:12px;color:var(--muted);width:44px">${ptsLabel}</td>
-          </tr>`;
-        });
-        html += `</table></div>`;
-      });
-      html += `</div></div>
-        <div class="carousel-nav" id="bets-nav">`;
-      for (let i = 0; i < totalGames; i++) {
-        html += `<button class="carousel-dot ${i===0?'active':''}" onclick="carouselGoTo(${i})" aria-label="Jogo ${i+1}"></button>`;
-      }
-      html += `</div></div>`;
     }
     html += `</section>`;
   }
@@ -717,21 +382,19 @@ function renderMain() {
     html += `<section class="card standings">
       <h2>Resultados da Jornada Atual</h2>
       <div class="sub">Pontuação obtida nesta jornada</div>
-      <div class="row-head"><div></div><div></div><div>Jogador</div><div class="num" style="grid-column:span 3;text-align:right">Pontos</div></div>`;
+      <div class="row-head"><div></div><div>Jogador</div><div></div><div></div><div class="num">Pontos</div></div>`;
     sorted.forEach(([name, pts], i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
-        <div>${avatarHtml(name, 'sm')}</div>
         <div>${escapeHtml(name)}</div>
-        <div class="pts" style="grid-column:span 3;text-align:right">${pts} pts</div>
+        <div></div><div></div>
+        <div class="pts">${pts}</div>
       </div>`;
     });
     html += `</section>`;
   }
 
   document.getElementById('content').innerHTML = html;
-  if (kickoff) renderCountdownBar(round, 'countdown-main');
-  initCarousel();
 }
 
 // ============ RENDER PLAYER DETAIL ============
@@ -747,13 +410,8 @@ function renderPlayer() {
   let totalPts = 0, totalExact = 0, totalOutcome = 0, totalMiss = 0;
   let html = `<section class="card">
     <button class="btn ghost" onclick="switchTab('main')" style="margin-bottom:16px">← Voltar</button>
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:4px">
-      ${avatarHtml(name, 'lg')}
-      <div>
-        <h2 style="margin:0 0 2px">${escapeHtml(name)}</h2>
-        <div class="sub" style="margin:0">Histórico de apostas</div>
-      </div>
-    </div>`;
+    <h2>${escapeHtml(name)}</h2>
+    <div class="sub">Histórico de apostas</div>`;
 
   const ids = Object.keys(state.rounds).slice().reverse();
   const roundsWithBets = ids.filter(rid => {
@@ -844,7 +502,7 @@ function renderHistory() {
       } else {
         html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th><th>Resultado</th>`;
         const playersInRound = Object.keys(round.bets || {}).length > 0 ? Object.keys(round.bets) : state.players;
-        playersInRound.forEach(p => html += `<th><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${avatarHtml(p,'sm')}<span>${escapeHtml(p)}</span></div></th>`);
+        playersInRound.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
         html += `</tr></thead><tbody>`;
         round.games.forEach((g, i) => {
           const has = g.homeScore != null && g.awayScore != null;
@@ -886,33 +544,12 @@ async function renderAdmin() {
         <button class="btn accent" onclick="doSetPassword()">Definir password</button>
         <div id="msg"></div>`;
     } else {
-      html += `<input type="password" id="pwd" placeholder="Password de admin" onkeydown="if(event.key==='Enter')doLogin()">
+      html += `<input type="password" id="pwd" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
         <div style="height:8px"></div>
-        <button class="btn accent" onclick="doLogin()">Entrar como admin</button>
+        <button class="btn accent" onclick="doLogin()">Entrar</button>
         <div id="msg"></div>`;
     }
     html += `</div></div>`;
-
-    // Player login section
-    if (state.players && state.players.some(p => state.playerPins && state.playerPins[p])) {
-      html += `<div class="login-box" style="margin-top:0"><div class="card">
-        <h2>Área do Jogador</h2>
-        <div class="sub">Inserir as minhas apostas</div>
-        <label>O teu nome</label>
-        <select id="player-select" style="margin-bottom:8px">
-          <option value="">— escolhe o teu nome —</option>`;
-      state.players.filter(p => state.playerPins && state.playerPins[p]).forEach(p => {
-        html += `<option value="${escapeAttr(p)}">${escapeHtml(p)}</option>`;
-      });
-      html += `</select>
-        <label>O teu PIN</label>
-        <input type="password" id="player-pin" placeholder="PIN" maxlength="10" onkeydown="if(event.key==='Enter')doPlayerLogin()">
-        <div style="height:8px"></div>
-        <button class="btn" style="background:var(--accent)" onclick="doPlayerLogin()">Entrar</button>
-        <div id="player-msg"></div>
-      </div></div>`;
-    }
-
     document.getElementById('content').innerHTML = html;
     return;
   }
@@ -925,22 +562,9 @@ async function renderAdmin() {
     <div class="sub">Quem participa no totobola</div>
     <div id="players-list">`;
   state.players.forEach(p => {
-    const hasPhoto = state.playerPhotos && state.playerPhotos[p];
-    const hasPin = state.playerPins && state.playerPins[p];
-    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:12px">
-      <div style="display:flex;align-items:center;gap:10px">
-        ${avatarHtml(p, 'sm')}
-        <div>
-          <div>${escapeHtml(p)}</div>
-          <div class="small" style="margin-top:2px">${hasPin ? '🔑 PIN definido' : '⚠️ Sem PIN'}</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="setPlayerPin('${escapeAttr(p)}')">${hasPin ? 'Alterar PIN' : 'Definir PIN'}</button>
-        <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="uploadPlayerPhoto('${escapeAttr(p)}')">${hasPhoto ? '🖼 Foto' : '📷 Foto'}</button>
-        ${hasPhoto ? `<button class="btn ghost" style="font-size:12px;padding:6px 10px;color:var(--danger)" onclick="removePlayerPhoto('${escapeAttr(p)}')">✕</button>` : ''}
-        <button class="btn ghost" style="font-size:12px;padding:6px 12px" onclick="removePlayer('${escapeAttr(p)}')">Remover</button>
-      </div>
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">
+      <span>${escapeHtml(p)}</span>
+      <button class="btn ghost" onclick="removePlayer('${escapeAttr(p)}')">Remover</button>
     </div>`;
   });
   html += `</div>
@@ -1152,272 +776,6 @@ async function updateBet(player, i, field, val) {
   await saveState();
 }
 
-// ============ PLAYER SESSION ============
-async function setPlayerPin(name) {
-  const pin = prompt(`PIN para ${name} (4-10 dígitos, partilha por privado):`);
-  if (!pin || pin.trim().length < 4) { if (pin !== null) alert('Mínimo 4 caracteres.'); return; }
-  if (!state.playerPins) state.playerPins = {};
-  state.playerPins[name] = await sha256(pin.trim());
-  await saveState();
-  renderAdmin();
-  showToast(`PIN de ${name} guardado.`);
-}
-
-async function doPlayerLogin() {
-  const name = document.getElementById('player-select').value;
-  const pin = document.getElementById('player-pin').value;
-  if (!name) { document.getElementById('player-msg').innerHTML = '<div class="err">Escolhe o teu nome.</div>'; return; }
-  if (!pin) { document.getElementById('player-msg').innerHTML = '<div class="err">Introduz o teu PIN.</div>'; return; }
-  const hash = await sha256(pin);
-  if (hash !== (state.playerPins || {})[name]) {
-    document.getElementById('player-msg').innerHTML = '<div class="err">PIN incorreto.</div>';
-    return;
-  }
-  currentPlayerSession = name;
-  updatePlayerBanner();
-  switchTab('mybets');
-}
-
-function logoutPlayer() {
-  currentPlayerSession = null;
-  updatePlayerBanner();
-  switchTab('main');
-}
-
-function updatePlayerBanner() {
-  const banner = document.getElementById('player-banner');
-  const nameEl = document.getElementById('player-banner-name');
-  const mybetsBtn = document.getElementById('tab-mybets');
-  if (currentPlayerSession) {
-    banner.style.display = 'flex';
-    nameEl.innerHTML = `${avatarHtml(currentPlayerSession,'sm')} <strong style="margin-left:8px">${escapeHtml(currentPlayerSession)}</strong> — sessão ativa`;
-    mybetsBtn.style.display = '';
-    document.querySelector('.wrap').style.paddingBottom = '80px';
-  } else {
-    banner.style.display = 'none';
-    mybetsBtn.style.display = 'none';
-    document.querySelector('.wrap').style.paddingBottom = '';
-  }
-}
-
-// ============ RENDER MY BETS ============
-// Returns true if the first game of the round has already kicked off
-function roundIsLocked(round) {
-  if (!round || round.games.length === 0) return false;
-  const kickoff = firstKickoff(round);
-  if (!kickoff) return false;
-  return Date.now() >= kickoff.getTime() - 60000; // fecha 1 min antes
-}
-
-async function renderMyBets() {
-  const name = currentPlayerSession;
-  if (!name) { switchTab('main'); return; }
-  const round = state.rounds[state.currentRoundId];
-
-  let html = `<section class="card">
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
-      ${avatarHtml(name, 'lg')}
-      <div>
-        <h2 style="margin:0 0 2px">${escapeHtml(name)}</h2>
-        <div class="sub" style="margin:0">As minhas apostas</div>
-      </div>
-    </div>`;
-
-  if (!round || round.games.length === 0) {
-    html += `<div class="empty"><div class="big">Sem jornada ativa</div>O administrador ainda não criou a jornada atual.</div></section>`;
-    document.getElementById('content').innerHTML = html;
-    return;
-  }
-
-  const existingBets = ((round.bets || {})[name]) || [];
-  const alreadyFull = existingBets.length === round.games.length && existingBets.every(b => b && b.h != null && b.a != null);
-  const locked = roundIsLocked(round);
-
-  // Countdown
-  const kickoff = firstKickoff(round);
-  if (kickoff) {
-    html += `<div id="countdown-mybets" class="countdown-bar">
-      <div>
-        <div class="countdown-label">Fecho das apostas em</div>
-        <div class="countdown-time">…</div>
-      </div>
-    </div>`;
-  }
-
-  html += `<h3 style="font-family:'Fraunces',serif;margin:0 0 4px">${escapeHtml(round.name)}</h3>
-    <div class="sub">Insere o teu prognóstico para cada jogo</div>`;
-
-  if (locked) {
-    html += `<div style="background:#fbe4df;border-radius:10px;padding:14px 16px;margin-bottom:18px;color:var(--danger);font-weight:500">
-      🔒 O primeiro jogo desta jornada já começou. As apostas estão fechadas.
-    </div>`;
-  } else if (alreadyFull) {
-    html += `<div style="background:var(--accent-soft);border-radius:10px;padding:14px 16px;margin-bottom:18px;color:var(--accent);font-weight:500">
-      ✅ Já submeteste as tuas apostas para esta jornada. Podes alterá-las até começar o primeiro jogo da jornada.
-    </div>`;
-  }
-
-  html += `<div id="mybets-form">`;
-  round.games.forEach((g, i) => {
-    const b = existingBets[i] || {};
-    const dateStr = g.date ? formatDate(g.date) : '';
-    const timeStr = g.time ? ` ${g.time}` : '';
-    html += `<div style="margin-bottom:16px;padding:14px;border:1px solid var(--line);border-radius:10px;background:#fafaf7">
-      <div class="small" style="margin-bottom:8px">${dateStr}${timeStr}</div>
-      <div class="score-row">
-        <div class="lbl l">${escapeHtml(g.home)}</div>
-        <input type="number" min="0" id="mb-${i}-h" value="${b.h ?? ''}" placeholder="—" style="text-align:center;padding:8px 4px" ${locked ? 'disabled' : ''}>
-        <div class="x">–</div>
-        <input type="number" min="0" id="mb-${i}-a" value="${b.a ?? ''}" placeholder="—" style="text-align:center;padding:8px 4px" ${locked ? 'disabled' : ''}>
-        <div class="lbl">${escapeHtml(g.away)}</div>
-        <div></div>
-      </div>
-    </div>`;
-  });
-  html += `</div>`;
-  if (!locked) {
-    html += `<div class="toolbar">
-      <button class="btn accent" onclick="submitMyBets()">💾 Guardar apostas</button>
-    </div>`;
-  }
-  html += `</section>`;
-
-  // ── Historial próprio ──
-  const ids = Object.keys(state.rounds).slice().reverse();
-  const pastRounds = ids.filter(rid => {
-    if (rid === state.currentRoundId) return false;
-    const r = state.rounds[rid];
-    const b = (r.bets || {})[name];
-    return b && b.length === r.games.length && b.every(x => x && x.h != null && x.a != null);
-  });
-
-  if (pastRounds.length > 0) {
-    let totalPts = 0, totalExact = 0;
-    html += `<section class="card">
-      <h2>O meu historial</h2>
-      <div class="sub">Jornadas anteriores</div>`;
-    pastRounds.forEach(rid => {
-      const r = state.rounds[rid];
-      const bets = r.bets[name];
-      let roundPts = 0;
-      let rows = '';
-      bets.forEach((b, i) => {
-        const g = r.games[i];
-        if (!g) return;
-        const pts = pointsForBet(b, g);
-        if (pts === 3) totalExact++;
-        if (pts != null) { roundPts += pts; totalPts += pts; }
-        const has = g.homeScore != null && g.awayScore != null;
-        let cls = '';
-        if (pts === 3) cls = 'exact'; else if (pts === 1) cls = 'outcome'; else if (pts === 0) cls = 'miss';
-        rows += `<tr>
-          <td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td>
-          <td>${has ? `${g.homeScore}–${g.awayScore}` : '—'}</td>
-          <td class="bet ${cls}">${b.h}–${b.a}</td>
-          <td>${pts != null ? pts : '—'}</td>
-        </tr>`;
-      });
-      html += `<details class="player-block">
-        <summary>${escapeHtml(r.name)} <span class="pill">${roundPts} pts</span></summary>
-        <div style="margin-top:12px"><div class="bets-grid"><table>
-          <thead><tr><th class="match">Jogo</th><th>Resultado</th><th>Aposta</th><th>Pts</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table></div></div>
-      </details>`;
-    });
-    html += `<div style="display:flex;gap:20px;padding:14px 8px 0;border-top:1px solid var(--line);margin-top:8px">
-      <div><div class="small">Total acumulado</div><div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600">${totalPts} pts</div></div>
-      <div><div class="small">Exatos</div><div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:var(--accent)">${totalExact}</div></div>
-    </div></section>`;
-  }
-
-  document.getElementById('content').innerHTML = html;
-  if (kickoff) renderCountdownBar(round, 'countdown-mybets');
-}
-
-async function submitMyBets() {
-  const name = currentPlayerSession;
-  const round = state.rounds[state.currentRoundId];
-  if (!name || !round) return;
-
-  // Double-check server-side lock
-  if (roundIsLocked(round)) {
-    showToast('🔒 Apostas fechadas — o primeiro jogo já começou.');
-    renderMyBets();
-    return;
-  }
-
-  if (!round.bets) round.bets = {};
-  if (!round.bets[name]) round.bets[name] = round.games.map(() => ({ h: null, a: null }));
-  while (round.bets[name].length < round.games.length) round.bets[name].push({ h: null, a: null });
-
-  let allFilled = true;
-  round.games.forEach((g, i) => {
-    const hVal = document.getElementById(`mb-${i}-h`).value;
-    const aVal = document.getElementById(`mb-${i}-a`).value;
-    const h = hVal === '' ? null : parseInt(hVal, 10);
-    const a = aVal === '' ? null : parseInt(aVal, 10);
-    round.bets[name][i] = { h: isNaN(h) ? null : h, a: isNaN(a) ? null : a };
-    if (h == null || a == null) allFilled = false;
-  });
-
-  await saveState();
-  showToast(allFilled ? '✅ Apostas guardadas!' : '⚠️ Guardado (alguns jogos sem aposta)');
-  renderMyBets();
-}
-
-// ============ CAROUSEL ============
-let carouselIndex = 0;
-
-function carouselGoTo(i) {
-  const track = document.getElementById('bets-track');
-  const dots = document.querySelectorAll('#bets-nav .carousel-dot');
-  if (!track) return;
-  carouselIndex = i;
-  track.style.transform = `translateX(-${i * 100}%)`;
-  dots.forEach((d, j) => d.classList.toggle('active', j === i));
-}
-
-function initCarousel() {
-  const wrap = document.getElementById('bets-carousel');
-  const track = document.getElementById('bets-track');
-  if (!wrap || !track) return;
-  carouselIndex = 0;
-  const slides = track.querySelectorAll('.carousel-slide');
-  const total = slides.length;
-  let startX = 0, dragging = false, moved = 0;
-
-  const pointerStart = e => {
-    startX = (e.touches ? e.touches[0].clientX : e.clientX);
-    dragging = true; moved = 0;
-    track.style.transition = 'none';
-  };
-  const pointerMove = e => {
-    if (!dragging) return;
-    moved = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
-    const base = -carouselIndex * 100;
-    const pct = (moved / wrap.offsetWidth) * 100;
-    track.style.transform = `translateX(calc(${base}% + ${moved}px))`;
-  };
-  const pointerEnd = () => {
-    if (!dragging) return;
-    dragging = false;
-    track.style.transition = 'transform .3s ease';
-    const threshold = wrap.offsetWidth * 0.2;
-    if (moved < -threshold && carouselIndex < total - 1) carouselGoTo(carouselIndex + 1);
-    else if (moved > threshold && carouselIndex > 0) carouselGoTo(carouselIndex - 1);
-    else carouselGoTo(carouselIndex);
-  };
-
-  wrap.addEventListener('touchstart', pointerStart, { passive: true });
-  wrap.addEventListener('touchmove', pointerMove, { passive: true });
-  wrap.addEventListener('touchend', pointerEnd);
-  wrap.addEventListener('mousedown', pointerStart);
-  wrap.addEventListener('mousemove', pointerMove);
-  wrap.addEventListener('mouseup', pointerEnd);
-  wrap.addEventListener('mouseleave', pointerEnd);
-}
-
 // ============ HELPERS ============
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
@@ -1439,20 +797,17 @@ function showToast(msg) {
 function switchTab(t) {
   currentTab = t;
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('tab-' + t);
-  if (btn) btn.classList.add('active');
+  document.getElementById('tab-' + t).classList.add('active');
   rerender();
 }
 function rerender() {
   if (currentTab === 'main') renderMain();
   else if (currentTab === 'history') renderHistory();
   else if (currentTab === 'player') renderPlayer();
-  else if (currentTab === 'mybets') renderMyBets();
   else renderAdmin();
 }
 document.getElementById('tab-main').onclick = () => switchTab('main');
 document.getElementById('tab-history').onclick = () => switchTab('history');
-document.getElementById('tab-mybets').onclick = () => switchTab('mybets');
 document.getElementById('tab-admin').onclick = () => switchTab('admin');
 
 // ============ INIT ============
@@ -1473,9 +828,7 @@ document.getElementById('tab-admin').onclick = () => switchTab('admin');
   sb.channel('kv-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'kv_store', filter: `key=eq.${STATE_KEY}` }, async () => {
       await loadState();
-      if (currentTab !== 'admin' || !isAdmin) {
-        if (currentTab !== 'mybets') rerender(); // don't interrupt active bet entry
-      }
+      if (currentTab !== 'admin' || !isAdmin) rerender();
     })
     .subscribe();
 })();
