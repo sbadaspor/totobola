@@ -224,6 +224,7 @@ async function loadState() {
   try {
     const v = await kvGet(STATE_KEY);
     if (v) state = v;
+    migratePlayers();
   } catch (e) {
     console.error('loadState error', e);
     showToast('Erro ao carregar dados: ' + e.message);
@@ -249,7 +250,7 @@ function pointsForBet(bet, result) {
 }
 function roundTotals(round) {
   const totals = {};
-  for (const p of state.players) totals[p] = 0;
+  for (const p of playerNames()) totals[p] = 0;
   if (!round) return totals;
   for (const p of Object.keys(round.bets || {})) {
     const bets = round.bets[p];
@@ -264,7 +265,7 @@ function roundTotals(round) {
 }
 function generalStandings() {
   const totals = {};
-  for (const p of state.players) totals[p] = { pts: 0, exact: 0, played: 0 };
+  for (const p of playerNames()) totals[p] = { pts: 0, exact: 0, played: 0 };
   for (const rid of Object.keys(state.rounds)) {
     const round = state.rounds[rid];
     const finished = round.games.length > 0 && round.games.every(g => g.homeScore != null && g.awayScore != null);
@@ -285,7 +286,7 @@ function generalStandings() {
 }
 function allBetsSubmitted(round) {
   if (!round || state.players.length === 0 || round.games.length === 0) return false;
-  return state.players.every(p => {
+  return playerNames().every(p => {
     const b = (round.bets || {})[p];
     return b && b.length === round.games.length && b.every(x => x && x.h != null && x.a != null);
   });
@@ -307,7 +308,7 @@ function renderMain() {
     standings.forEach((s, i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
-        <div style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px" onclick="showPlayer('${escapeAttr(s.name)}')">${escapeHtml(s.name)}</div>
+        <div style="cursor:pointer;display:flex;align-items:center;gap:10px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px" onclick="showPlayer('${escapeAttr(s.name)}')">${avatarHtml(s.name, 32)}<span>${escapeHtml(s.name)}</span></div>
         <div class="num">${s.played}</div>
         <div class="num">${s.exact}</div>
         <div class="pts">${s.pts}</div>
@@ -340,25 +341,38 @@ function renderMain() {
   }
   html += `</section>`;
 
+  // "A minha aposta" CTA block
+  if (round && round.games.length > 0) {
+    const locked = isRoundLocked(round);
+    const dl = roundDeadline(round);
+    html += `<section class="card" style="background:linear-gradient(135deg,#fff,#fafaf7)">
+      <h2>A minha aposta</h2>
+      <div class="sub">${locked ? 'Apostas encerradas' : (dl ? `Fecha às ${new Date(dl).toLocaleString('pt-PT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}` : 'Submete o teu palpite')}</div>
+      <button class="btn accent" onclick="switchTab('mybet')" ${locked?'disabled style="opacity:.5;cursor:not-allowed"':''}>${locked?'Apostas fechadas':'Entrar / Editar a minha aposta'}</button>
+    </section>`;
+  }
+
   if (round && round.games.length > 0) {
     const allIn = allBetsSubmitted(round);
     html += `<section class="card">
       <h2>Apostas dos Jogadores</h2>
       <div class="sub">Jornada atual</div>`;
     if (!allIn) {
-      const submitted = state.players.filter(p => {
+      const names = playerNames();
+      const submitted = names.filter(p => {
         const b = (round.bets || {})[p];
         return b && b.length === round.games.length && b.every(x => x && x.h != null && x.a != null);
       }).length;
-      html += `<div class="empty"><div class="big">🔒 Apostas ocultas</div>As apostas ficam visíveis quando todos submeterem.<br><span class="small">${submitted} de ${state.players.length} jogadores submeteram.</span></div>`;
+      html += `<div class="empty"><div class="big">🔒 Apostas ocultas</div>As apostas ficam visíveis quando todos submeterem.<br><span class="small">${submitted} de ${names.length} jogadores submeteram.</span></div>`;
     } else {
       const totals = roundTotals(round);
+      const names = playerNames();
       html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th>`;
-      state.players.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
+      names.forEach(p => html += `<th><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${avatarHtml(p, 28)}<span>${escapeHtml(p)}</span></div></th>`);
       html += `</tr></thead><tbody>`;
       round.games.forEach((g, i) => {
         html += `<tr><td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td>`;
-        state.players.forEach(p => {
+        names.forEach(p => {
           const b = round.bets[p][i];
           const pts = pointsForBet(b, g);
           let cls = '';
@@ -370,7 +384,7 @@ function renderMain() {
         html += `</tr>`;
       });
       html += `</tbody><tfoot><tr><td class="match">Total</td>`;
-      state.players.forEach(p => html += `<td>${totals[p]}</td>`);
+      names.forEach(p => html += `<td>${totals[p]}</td>`);
       html += `</tr></tfoot></table></div>`;
     }
     html += `</section>`;
@@ -386,7 +400,7 @@ function renderMain() {
     sorted.forEach(([name, pts], i) => {
       html += `<div class="row">
         <div class="rank ${i === 0 ? 'top' : ''}">${i + 1}</div>
-        <div>${escapeHtml(name)}</div>
+        <div style="display:flex;align-items:center;gap:10px">${avatarHtml(name, 32)}<span>${escapeHtml(name)}</span></div>
         <div></div><div></div>
         <div class="pts">${pts}</div>
       </div>`;
@@ -410,8 +424,13 @@ function renderPlayer() {
   let totalPts = 0, totalExact = 0, totalOutcome = 0, totalMiss = 0;
   let html = `<section class="card">
     <button class="btn ghost" onclick="switchTab('main')" style="margin-bottom:16px">← Voltar</button>
-    <h2>${escapeHtml(name)}</h2>
-    <div class="sub">Histórico de apostas</div>`;
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px">
+      ${avatarHtml(name, 52)}
+      <div>
+        <h2 style="margin:0">${escapeHtml(name)}</h2>
+        <div class="sub" style="margin:0">Histórico de apostas</div>
+      </div>
+    </div>`;
 
   const ids = Object.keys(state.rounds).slice().reverse();
   const roundsWithBets = ids.filter(rid => {
@@ -467,6 +486,124 @@ function renderPlayer() {
   document.getElementById('content').innerHTML = html;
 }
 
+// ============ MY BET (player self-submit) ============
+let loggedPlayer = null;
+function renderMyBet() {
+  const round = state.rounds[state.currentRoundId];
+  if (!round || round.games.length === 0) {
+    document.getElementById('content').innerHTML = `<section class="card">
+      <button class="btn ghost" onclick="switchTab('main')" style="margin-bottom:16px">← Voltar</button>
+      <div class="empty"><div class="big">Sem jornada ativa</div>Ainda não há jogos para apostar.</div>
+    </section>`;
+    return;
+  }
+  const locked = isRoundLocked(round);
+
+  // Login screen
+  if (!loggedPlayer) {
+    let html = `<section class="card" style="max-width:420px;margin:0 auto">
+      <button class="btn ghost" onclick="switchTab('main')" style="margin-bottom:16px">← Voltar</button>
+      <h2>A minha aposta</h2>
+      <div class="sub">Identifica-te para submeter</div>
+      <label>Jogador</label>
+      <select id="mb-name">
+        <option value="">— escolhe o teu nome —</option>`;
+    state.players.forEach(p => html += `<option value="${escapeAttr(p.name)}">${escapeHtml(p.name)}</option>`);
+    html += `</select>
+      <div style="height:12px"></div>
+      <label>PIN</label>
+      <input type="password" id="mb-pin" placeholder="PIN fornecido pelo admin" onkeydown="if(event.key==='Enter')playerLogin()">
+      <div style="height:12px"></div>
+      <button class="btn accent" onclick="playerLogin()">Entrar</button>
+      <div id="mb-msg"></div>
+    </section>`;
+    document.getElementById('content').innerHTML = html;
+    return;
+  }
+
+  // Bet editor for logged player
+  const p = getPlayer(loggedPlayer);
+  if (!p) { loggedPlayer = null; renderMyBet(); return; }
+  const bets = (round.bets && round.bets[loggedPlayer]) || round.games.map(() => ({ h: null, a: null }));
+
+  let html = `<section class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <button class="btn ghost" onclick="switchTab('main')">← Voltar</button>
+      <button class="btn ghost" onclick="playerLogout()">Sair</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin:10px 0 4px">
+      ${avatarHtml(p, 44)}
+      <div>
+        <h2 style="margin:0">${escapeHtml(p.name)}</h2>
+        <div class="sub" style="margin:0">${escapeHtml(round.name)}</div>
+      </div>
+    </div>`;
+
+  if (locked) {
+    html += `<div class="empty" style="padding:24px 12px"><div class="big">🔒 Apostas encerradas</div>O prazo de submissão já terminou.</div>
+      <div style="margin-top:8px">`;
+    round.games.forEach((g, i) => {
+      const b = bets[i] || {};
+      const filled = b.h != null && b.a != null;
+      html += `<div class="score-row" style="opacity:.7">
+        <div class="lbl l">${escapeHtml(g.home)}</div>
+        <input type="number" value="${b.h??''}" disabled>
+        <div class="x">–</div>
+        <input type="number" value="${b.a??''}" disabled>
+        <div class="lbl">${escapeHtml(g.away)}</div>
+        <div></div>
+      </div>`;
+    });
+    html += `</div>`;
+  } else {
+    const dl = roundDeadline(round);
+    if (dl) html += `<div class="small" style="margin-bottom:14px">Fecha às ${new Date(dl).toLocaleString('pt-PT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`;
+    round.games.forEach((g, i) => {
+      const b = bets[i] || {};
+      const dateStr = g.date ? formatDate(g.date) : '';
+      const timeStr = g.time || '';
+      html += `<div class="score-row">
+        <div class="lbl l">${escapeHtml(g.home)}<div style="font-size:10px;color:var(--muted)">${dateStr} ${timeStr}</div></div>
+        <input type="number" min="0" value="${b.h??''}" onchange="updateMyBet(${i},'h',this.value)">
+        <div class="x">–</div>
+        <input type="number" min="0" value="${b.a??''}" onchange="updateMyBet(${i},'a',this.value)">
+        <div class="lbl">${escapeHtml(g.away)}</div>
+        <div></div>
+      </div>`;
+    });
+    html += `<div class="small" style="margin-top:14px">Alterações são guardadas automaticamente.</div>`;
+  }
+
+  html += `</section>`;
+  document.getElementById('content').innerHTML = html;
+}
+
+async function playerLogin() {
+  const name = document.getElementById('mb-name').value;
+  const pin = document.getElementById('mb-pin').value.trim();
+  const msg = document.getElementById('mb-msg');
+  if (!name) { msg.innerHTML = '<div class="err">Escolhe o teu nome.</div>'; return; }
+  const p = getPlayer(name);
+  if (!p) { msg.innerHTML = '<div class="err">Jogador não encontrado.</div>'; return; }
+  if (!p.pin) { msg.innerHTML = '<div class="err">O admin ainda não definiu um PIN para ti.</div>'; return; }
+  if (p.pin !== pin) { msg.innerHTML = '<div class="err">PIN incorreto.</div>'; return; }
+  loggedPlayer = name;
+  renderMyBet();
+}
+function playerLogout() { loggedPlayer = null; switchTab('main'); }
+
+async function updateMyBet(i, field, val) {
+  const round = state.rounds[state.currentRoundId];
+  if (isRoundLocked(round)) { showToast('Apostas encerradas.'); return; }
+  if (!round.bets) round.bets = {};
+  if (!round.bets[loggedPlayer]) round.bets[loggedPlayer] = round.games.map(() => ({ h: null, a: null }));
+  while (round.bets[loggedPlayer].length < round.games.length) round.bets[loggedPlayer].push({ h: null, a: null });
+  const v = val === '' ? null : parseInt(val, 10);
+  round.bets[loggedPlayer][i][field] = isNaN(v) ? null : v;
+  await saveState();
+  showToast('Guardado');
+}
+
 // ============ RENDER HISTORY ============
 function renderHistory() {
   const ids = Object.keys(state.rounds);
@@ -488,7 +625,8 @@ function renderHistory() {
         html += `<div class="small">Sem jogos.</div>`;
       } else if (!allBetsSubmitted(round)) {
         // Show only games + results, hide bets until everyone submitted
-        const submitted = state.players.filter(p => {
+        const names = playerNames();
+        const submitted = names.filter(p => {
           const b = (round.bets || {})[p];
           return b && b.length === round.games.length && b.every(x => x && x.h != null && x.a != null);
         }).length;
@@ -498,11 +636,11 @@ function renderHistory() {
           html += `<tr><td class="match">${escapeHtml(g.home)} – ${escapeHtml(g.away)}</td><td>${has ? `${g.homeScore}–${g.awayScore}` : '—'}</td></tr>`;
         });
         html += `</tbody></table></div>
-          <div class="empty" style="padding:20px 10px"><div class="big">🔒 Apostas ocultas</div>Ficam visíveis quando todos submeterem.<br><span class="small">${submitted} de ${state.players.length} jogadores submeteram.</span></div>`;
+          <div class="empty" style="padding:20px 10px"><div class="big">🔒 Apostas ocultas</div>Ficam visíveis quando todos submeterem.<br><span class="small">${submitted} de ${names.length} jogadores submeteram.</span></div>`;
       } else {
         html += `<div class="bets-grid"><table><thead><tr><th class="match">Jogo</th><th>Resultado</th>`;
-        const playersInRound = Object.keys(round.bets || {}).length > 0 ? Object.keys(round.bets) : state.players;
-        playersInRound.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
+        const playersInRound = Object.keys(round.bets || {}).length > 0 ? Object.keys(round.bets) : playerNames();
+        playersInRound.forEach(p => html += `<th><div style="display:flex;flex-direction:column;align-items:center;gap:4px">${avatarHtml(p, 24)}<span>${escapeHtml(p)}</span></div></th>`);
         html += `</tr></thead><tbody>`;
         round.games.forEach((g, i) => {
           const has = g.homeScore != null && g.awayScore != null;
@@ -559,12 +697,23 @@ async function renderAdmin() {
 
   html += `<section class="card">
     <h2>Jogadores</h2>
-    <div class="sub">Quem participa no totobola</div>
+    <div class="sub">Quem participa · PIN para submeter apostas · foto de perfil</div>
     <div id="players-list">`;
-  state.players.forEach(p => {
-    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">
-      <span>${escapeHtml(p)}</span>
-      <button class="btn ghost" onclick="removePlayer('${escapeAttr(p)}')">Remover</button>
+  state.players.forEach((p, idx) => {
+    html += `<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">
+      ${avatarHtml(p, 44)}
+      <div style="flex:1;min-width:140px">
+        <div style="font-weight:500">${escapeHtml(p.name)}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+          <input type="text" placeholder="PIN" value="${escapeAttr(p.pin||'')}" style="max-width:120px;padding:6px 10px" onchange="updatePlayerPin(${idx}, this.value)">
+          <label class="btn ghost" style="padding:6px 12px;cursor:pointer;margin:0">
+            Foto
+            <input type="file" accept="image/*" style="display:none" onchange="handleAvatarUpload(${idx}, this.files[0])">
+          </label>
+          ${p.avatar ? `<button class="btn ghost" style="padding:6px 12px" onclick="clearAvatar(${idx})">Limpar foto</button>` : ''}
+        </div>
+      </div>
+      <button class="btn ghost" onclick="removePlayer('${escapeAttr(p.name)}')">Remover</button>
     </div>`;
   });
   html += `</div>
@@ -633,18 +782,18 @@ async function renderAdmin() {
     if (state.players.length > 0 && round.games.length > 0) {
       html += `<div style="height:24px"></div><label>Apostas dos jogadores</label>`;
       state.players.forEach(p => {
-        const bets = (round.bets || {})[p] || [];
+        const bets = (round.bets || {})[p.name] || [];
         const filled = bets.filter(b => b && b.h != null && b.a != null).length;
         html += `<details class="player-block">
-          <summary>${escapeHtml(p)} <span class="pill ${filled === round.games.length ? '' : 'muted'}">${filled}/${round.games.length}</span></summary>
+          <summary style="display:flex;align-items:center;gap:10px">${avatarHtml(p, 28)}<span style="flex:1">${escapeHtml(p.name)}</span><span class="pill ${filled === round.games.length ? '' : 'muted'}">${filled}/${round.games.length}</span></summary>
           <div style="margin-top:12px">`;
         round.games.forEach((g, i) => {
           const b = bets[i] || {};
           html += `<div class="score-row">
             <div class="lbl l">${escapeHtml(g.home)}</div>
-            <input type="number" min="0" value="${b.h ?? ''}" onchange="updateBet('${escapeAttr(p)}',${i},'h',this.value)">
+            <input type="number" min="0" value="${b.h ?? ''}" onchange="updateBet('${escapeAttr(p.name)}',${i},'h',this.value)">
             <div class="x">–</div>
-            <input type="number" min="0" value="${b.a ?? ''}" onchange="updateBet('${escapeAttr(p)}',${i},'a',this.value)">
+            <input type="number" min="0" value="${b.a ?? ''}" onchange="updateBet('${escapeAttr(p.name)}',${i},'a',this.value)">
             <div class="lbl">${escapeHtml(g.away)}</div>
             <div></div>
           </div>`;
@@ -708,17 +857,41 @@ function logout() { isAdmin = false; renderAdmin(); }
 
 async function addPlayer() {
   const v = document.getElementById('newplayer').value.trim();
-  if (!v || state.players.includes(v)) return;
-  state.players.push(v);
+  if (!v || playerNames().includes(v)) return;
+  state.players.push({ name: v, pin: '', avatar: '' });
   await saveState();
   renderAdmin();
 }
 async function removePlayer(name) {
   if (!confirm('Remover jogador "' + name + '"? As suas apostas serão também removidas.')) return;
-  state.players = state.players.filter(p => p !== name);
+  state.players = state.players.filter(p => p.name !== name);
   for (const rid of Object.keys(state.rounds)) {
     if (state.rounds[rid].bets) delete state.rounds[rid].bets[name];
   }
+  await saveState();
+  renderAdmin();
+}
+async function updatePlayerPin(idx, pin) {
+  state.players[idx].pin = pin.trim();
+  await saveState();
+  showToast('PIN atualizado');
+}
+async function handleAvatarUpload(idx, file) {
+  if (!file) return;
+  showToast('A carregar foto…');
+  try {
+    const url = await uploadAvatar(state.players[idx].name, file);
+    state.players[idx].avatar = url;
+    await saveState();
+    showToast('Foto atualizada');
+    renderAdmin();
+  } catch (e) {
+    console.error(e);
+    showToast('Erro: ' + e.message);
+  }
+}
+async function clearAvatar(idx) {
+  state.players[idx].avatar = '';
   await saveState();
   renderAdmin();
 }
@@ -786,6 +959,64 @@ function formatDate(iso) {
   const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   return `${parseInt(parts[2],10)} ${months[parseInt(parts[1],10)-1]}`;
 }
+
+// Migrate old-format players (array of strings) to new format (array of objects)
+function migratePlayers() {
+  if (!Array.isArray(state.players)) state.players = [];
+  state.players = state.players.map(p => typeof p === 'string' ? { name: p, pin: '', avatar: '' } : p);
+}
+function playerNames() { return state.players.map(p => p.name); }
+function getPlayer(name) { return state.players.find(p => p.name === name); }
+
+// Calculate round deadline: earliest date+time among the games
+function roundDeadline(round) {
+  if (!round || !round.games.length) return null;
+  const ts = round.games
+    .filter(g => g.date && g.time)
+    .map(g => new Date(`${g.date}T${g.time}`).getTime())
+    .filter(t => !isNaN(t));
+  return ts.length ? Math.min(...ts) : null;
+}
+function isRoundLocked(round) {
+  const dl = roundDeadline(round);
+  return dl != null && Date.now() >= dl;
+}
+
+// Avatar rendering
+function avatarHtml(player, size = 28) {
+  const p = typeof player === 'string' ? getPlayer(player) : player;
+  const name = p ? p.name : (typeof player === 'string' ? player : '');
+  const url = p && p.avatar ? p.avatar : '';
+  const initial = escapeHtml((name||'?').charAt(0).toUpperCase());
+  const style = `width:${size}px;height:${size}px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:${Math.round(size*0.42)}px;flex-shrink:0;`;
+  if (url) return `<img src="${escapeAttr(url)}" style="${style}object-fit:cover;background:var(--line)" alt="">`;
+  return `<span style="${style}background:var(--accent-soft);color:var(--accent)">${initial}</span>`;
+}
+
+// Resize image in browser before upload
+async function resizeImageFile(file, maxSize = 200) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Falha a processar imagem')), 'image/jpeg', 0.85);
+    };
+    img.onerror = () => reject(new Error('Ficheiro inválido'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function uploadAvatar(playerName, file) {
+  const blob = await resizeImageFile(file, 200);
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;
+  const { error } = await sb.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+  if (error) throw error;
+  const { data } = sb.storage.from('avatars').getPublicUrl(path);
+  return data.publicUrl;
+}
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -804,6 +1035,7 @@ function rerender() {
   if (currentTab === 'main') renderMain();
   else if (currentTab === 'history') renderHistory();
   else if (currentTab === 'player') renderPlayer();
+  else if (currentTab === 'mybet') renderMyBet();
   else renderAdmin();
 }
 document.getElementById('tab-main').onclick = () => switchTab('main');
